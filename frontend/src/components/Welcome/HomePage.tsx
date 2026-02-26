@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageContainer from '../Layout/PageContainer';
+import { check401 } from '../../api/client';
 import { useAccounts } from '../../hooks/useAccounts';
 import { accountHash } from '../../utils/account';
 
@@ -40,9 +41,11 @@ export default function HomePage() {
 
       const [downloads, packages] = await Promise.all([
         fetch(`/api/downloads?${params}`)
+          .then(check401)
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
         fetch(`/api/packages?${params}`)
+          .then(check401)
           .then((r) => (r.ok ? r.json() : []))
           .catch(() => []),
       ]);

@@ -1,5 +1,6 @@
 import type { PlistDict } from './plist';
 import { parsePlist } from './plist';
+import { check401 } from '../api/client';
 
 export interface BagOutput {
   authURL: string;
@@ -15,6 +16,7 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
   try {
     const resp = await fetch(`/api/bag?guid=${encodeURIComponent(deviceId)}`);
     if (!resp.ok) {
+      check401(resp);
       const err = await resp.json().catch(() => ({ error: resp.statusText }));
       console.warn(
         `[Bag] Proxy request failed, using default auth endpoint: ${err.error || `HTTP ${resp.status}`}`,

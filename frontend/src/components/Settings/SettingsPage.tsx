@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageContainer from '../Layout/PageContainer';
 import Modal from '../common/Modal';
+import { check401 } from '../../api/client';
 import { useAccountsStore } from '../../store/accounts';
 import { useAuthStore } from '../../store/auth';
 import { useToastStore } from '../../store/toast';
@@ -70,6 +71,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     fetch('/api/settings')
+      .then(check401)
       .then((r) => (r.ok ? r.json() : null))
       .then((info: ServerInfo | null) => {
         setServerInfo(info);
@@ -218,6 +220,8 @@ export default function SettingsPage() {
           autoCleanupMaxMB: parseInt(editCleanupMaxMB) || 0,
         }),
       });
+      check401(res);
+      if (res.status === 401) return;
       if (res.ok) {
         const updated = (await res.json()) as {
           autoCleanupDays: number;
