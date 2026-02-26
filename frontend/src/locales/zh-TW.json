@@ -235,7 +235,10 @@
       "cleanupMaxMBHint": "總容量超過 N MB 時從最舊的開始刪除。0 = 停用。",
       "saveCleanup": "儲存",
       "saved": "設定已儲存。",
-      "saveFailed": "儲存設定失敗。"
+      "saveFailed": "儲存設定失敗。",
+      "storage": "儲存空間",
+      "storageFiles": "{{count}} 個檔案",
+      "storageEmpty": "無檔案"
     },
     "data": {
       "title": "資料",

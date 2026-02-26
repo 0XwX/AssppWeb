@@ -8,11 +8,26 @@ settings.get('/settings', async (c) => {
   const envDays = parseInt(c.env.AUTO_CLEANUP_DAYS ?? '0', 10) || 0;
   const envMaxMB = parseInt(c.env.AUTO_CLEANUP_MAX_MB ?? '0', 10) || 0;
 
+  // Scan R2 for storage stats
+  let storageSizeBytes = 0;
+  let storageFileCount = 0;
+  let cursor: string | undefined;
+  do {
+    const listed = await c.env.IPA_BUCKET.list({ cursor, limit: 500 });
+    for (const obj of listed.objects) {
+      storageSizeBytes += obj.size;
+      storageFileCount++;
+    }
+    cursor = listed.truncated ? listed.cursor : undefined;
+  } while (cursor);
+
   return c.json({
     buildCommit: c.env.BUILD_COMMIT ?? 'unknown',
     buildDate: c.env.BUILD_DATE ?? 'unknown',
     autoCleanupDays: config.autoCleanupDays ?? envDays,
     autoCleanupMaxMB: config.autoCleanupMaxMB ?? envMaxMB,
+    storageSizeMB: Math.round((storageSizeBytes / (1024 * 1024)) * 100) / 100,
+    storageFileCount,
   });
 });
 

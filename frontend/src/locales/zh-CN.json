@@ -235,7 +235,10 @@
       "cleanupMaxMBHint": "总容量超过 N MB 时从最旧的开始删除。0 = 禁用。",
       "saveCleanup": "保存",
       "saved": "设置已保存。",
-      "saveFailed": "保存设置失败。"
+      "saveFailed": "保存设置失败。",
+      "storage": "存储空间",
+      "storageFiles": "{{count}} 个文件",
+      "storageEmpty": "无文件"
     },
     "data": {
       "title": "数据",

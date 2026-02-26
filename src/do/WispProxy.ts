@@ -38,7 +38,7 @@ interface Stream {
  * CONTINUE payload: [bufferRemaining: u32]
  * CLOSE payload: [reason: u8]
  */
-export class WispProxy extends DurableObject {
+export class WispProxy extends DurableObject<Env> {
   private streams = new Map<number, Stream>();
   private ws: WebSocket | null = null;
 

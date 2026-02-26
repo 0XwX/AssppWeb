@@ -1,5 +1,4 @@
 import { DurableObject } from 'cloudflare:workers';
-import { v4 as uuidv4 } from 'uuid';
 import bplistParser from 'bplist-parser';
 import bplistCreator from 'bplist-creator';
 import plist from 'plist';
@@ -181,14 +180,8 @@ async function fetchWithRetry(
  *   r2key:<id>       → string              (R2 object key for completed IPA)
  *   accounts:<hash>  → JSON(string[])      (task IDs for an account)
  */
-export class DownloadManager extends DurableObject {
+export class DownloadManager extends DurableObject<Env> {
   private abortControllers = new Map<string, AbortController>();
-  declare env: Env;
-
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
-    this.env = env;
-  }
 
   // ---------------------------------------------------------------------------
   // RPC methods (called from HTTP routes via DO stub)
@@ -201,7 +194,7 @@ export class DownloadManager extends DurableObject {
     }
 
     const task: DownloadTask = {
-      id: uuidv4(),
+      id: crypto.randomUUID(),
       software: params.software,
       accountHash: params.accountHash,
       downloadURL: params.downloadURL,
@@ -389,9 +382,15 @@ export class DownloadManager extends DurableObject {
   async cleanupExpired(
     days: number,
     maxMB: number,
-  ): Promise<{ deletedByAge: number; deletedBySize: number; totalSizeMB: number }> {
+  ): Promise<{
+    deletedByAge: number;
+    deletedBySize: number;
+    deletedOrphaned: number;
+    totalSizeMB: number;
+  }> {
     let deletedByAge = 0;
     let deletedBySize = 0;
+    let deletedOrphaned = 0;
 
     // Collect all tasks
     const allTasks: Array<{ id: string; task: DownloadTask; r2key: string | null }> = [];
@@ -408,13 +407,29 @@ export class DownloadManager extends DurableObject {
       allTasks.push({ id, task, r2key });
     }
 
+    // Scan R2 upfront (shared by Phase 2 and Phase 3)
+    const sizeMap = new Map<string, number>();
+    let totalSize = 0;
+    let cursor: string | undefined;
+    do {
+      const listed = await this.env.IPA_BUCKET.list({ cursor, limit: 500 });
+      for (const obj of listed.objects) {
+        sizeMap.set(obj.key, obj.size);
+        totalSize += obj.size;
+      }
+      cursor = listed.truncated ? listed.cursor : undefined;
+    } while (cursor);
+
     // Phase 1: delete tasks older than N days
     if (days > 0) {
       const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
       for (const entry of [...allTasks]) {
         const createdAt = new Date(entry.task.createdAt).getTime();
         if (createdAt < cutoff) {
+          const size = entry.r2key ? (sizeMap.get(entry.r2key) ?? 0) : 0;
           await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key);
+          if (entry.r2key) sizeMap.delete(entry.r2key);
+          totalSize -= size;
           allTasks.splice(allTasks.indexOf(entry), 1);
           deletedByAge++;
         }
@@ -422,24 +437,9 @@ export class DownloadManager extends DurableObject {
     }
 
     // Phase 2: enforce total size limit
-    // List R2 to get actual sizes
-    const maxBytes = maxMB * 1024 * 1024;
-    let totalSize = 0;
-
     if (maxMB > 0) {
-      const sizeMap = new Map<string, number>();
-      let cursor: string | undefined;
-      do {
-        const listed = await this.env.IPA_BUCKET.list({ cursor, limit: 500 });
-        for (const obj of listed.objects) {
-          sizeMap.set(obj.key, obj.size);
-          totalSize += obj.size;
-        }
-        cursor = listed.truncated ? listed.cursor : undefined;
-      } while (cursor);
-
+      const maxBytes = maxMB * 1024 * 1024;
       if (totalSize > maxBytes) {
-        // Sort remaining tasks by createdAt ascending (oldest first)
         allTasks.sort(
           (a, b) => new Date(a.task.createdAt).getTime() - new Date(b.task.createdAt).getTime(),
         );
@@ -448,15 +448,38 @@ export class DownloadManager extends DurableObject {
           if (totalSize <= maxBytes) break;
           const size = entry.r2key ? (sizeMap.get(entry.r2key) ?? 0) : 0;
           await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key);
+          if (entry.r2key) sizeMap.delete(entry.r2key);
           totalSize -= size;
           deletedBySize++;
         }
       }
     }
 
+    // Phase 3: delete orphaned R2 objects (no matching DO record)
+    const knownR2Keys = new Set<string>();
+    const r2keyMap = await this.ctx.storage.list<string>({ prefix: 'r2key:' });
+    for (const [, value] of r2keyMap) {
+      knownR2Keys.add(value);
+    }
+
+    const orphanKeys: string[] = [];
+    for (const [key, size] of sizeMap) {
+      if (!knownR2Keys.has(key)) {
+        orphanKeys.push(key);
+        totalSize -= size;
+        deletedOrphaned++;
+      }
+    }
+    if (orphanKeys.length > 0) {
+      await this.env.IPA_BUCKET.delete(orphanKeys).catch((e) =>
+        console.error('Orphan R2 batch delete failed:', e),
+      );
+    }
+
     return {
       deletedByAge,
       deletedBySize,
+      deletedOrphaned,
       totalSizeMB: Math.round((totalSize / (1024 * 1024)) * 100) / 100,
     };
   }

@@ -235,7 +235,10 @@
       "cleanupMaxMBHint": "Delete oldest packages when total exceeds N MB. 0 = disabled.",
       "saveCleanup": "Save",
       "saved": "Settings saved.",
-      "saveFailed": "Failed to save settings."
+      "saveFailed": "Failed to save settings.",
+      "storage": "Storage",
+      "storageFiles": "{{count}} files",
+      "storageEmpty": "No files"
     },
     "data": {
       "title": "Data",

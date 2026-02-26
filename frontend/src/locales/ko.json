@@ -235,7 +235,10 @@
       "cleanupMaxMBHint": "총 용량이 N MB를 초과하면 오래된 것부터 삭제. 0 = 비활성화.",
       "saveCleanup": "저장",
       "saved": "설정이 저장되었습니다.",
-      "saveFailed": "설정 저장에 실패했습니다."
+      "saveFailed": "설정 저장에 실패했습니다.",
+      "storage": "저장 공간",
+      "storageFiles": "{{count}}개 파일",
+      "storageEmpty": "파일 없음"
     },
     "data": {
       "title": "데이터",

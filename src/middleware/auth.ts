@@ -1,6 +1,5 @@
 import type { MiddlewareHandler } from 'hono';
 import { getCookie } from 'hono/cookie';
-import type { DownloadManager } from '../do/DownloadManager.js';
 
 const SESSION_COOKIE = 'asspp_session';
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // 7 days
@@ -298,10 +297,8 @@ function hasLeadingZeroBits(hash: Uint8Array, bits: number): boolean {
 // DO stub helper
 // ---------------------------------------------------------------------------
 
-export function dm(env: Env): DurableObjectStub & InstanceType<typeof DownloadManager> {
-  return env.DOWNLOAD_MANAGER.get(
-    env.DOWNLOAD_MANAGER.idFromName('singleton'),
-  ) as unknown as DurableObjectStub & InstanceType<typeof DownloadManager>;
+export function dm(env: Env) {
+  return env.DOWNLOAD_MANAGER.get(env.DOWNLOAD_MANAGER.idFromName('singleton'));
 }
 
 // ---------------------------------------------------------------------------

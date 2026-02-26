@@ -14,6 +14,8 @@ interface ServerInfo {
   buildDate?: string;
   autoCleanupDays?: number;
   autoCleanupMaxMB?: number;
+  storageSizeMB?: number;
+  storageFileCount?: number;
 }
 
 const entityTypes = [
@@ -361,6 +363,31 @@ export default function SettingsPage() {
                   </dd>
                 </div>
               )}
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t('settings.server.storage')}
+                </dt>
+                <dd className="text-sm text-gray-900 dark:text-white mt-1">
+                  {serverInfo.storageFileCount != null ? (
+                    <>
+                      <span className="font-mono">
+                        {serverInfo.storageSizeMB != null && serverInfo.storageSizeMB >= 1024
+                          ? `${(serverInfo.storageSizeMB / 1024).toFixed(2)} GB`
+                          : `${serverInfo.storageSizeMB ?? 0} MB`}
+                      </span>
+                      <span className="text-gray-500 dark:text-gray-400 ml-2 text-xs">
+                        {serverInfo.storageFileCount > 0
+                          ? t('settings.server.storageFiles', {
+                              count: serverInfo.storageFileCount,
+                            })
+                          : t('settings.server.storageEmpty')}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
                   {t('settings.server.cleanupDays')}

@@ -235,7 +235,10 @@
       "cleanupMaxMBHint": "合計がN MBを超えた場合、古いものから削除。0 = 無効。",
       "saveCleanup": "保存",
       "saved": "設定を保存しました。",
-      "saveFailed": "設定の保存に失敗しました。"
+      "saveFailed": "設定の保存に失敗しました。",
+      "storage": "ストレージ",
+      "storageFiles": "{{count}} ファイル",
+      "storageEmpty": "ファイルなし"
     },
     "data": {
       "title": "データ",

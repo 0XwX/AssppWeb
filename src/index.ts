@@ -76,8 +76,8 @@ async function scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContex
   const envMaxMB = parseInt(env.AUTO_CLEANUP_MAX_MB || '0');
   const days = config.autoCleanupDays ?? envDays;
   const maxMB = config.autoCleanupMaxMB ?? envMaxMB;
-  if (days <= 0 && maxMB <= 0) return;
 
+  // Always run cleanup — even if days/maxMB are 0, orphaned R2 files need purging
   const result = await stub.cleanupExpired(days, maxMB);
   console.log('Cleanup result:', JSON.stringify(result));
 }
