@@ -30,8 +30,8 @@
 const SIG_LOCAL = 0x04034b50; // Local file header signature
 const SIG_CD = 0x02014b50; // Central directory file header signature
 const SIG_EOCD = 0x06054b50; // End of central directory record signature
-const SIG_ZIP64_EOCD = 0x06064b50; // ZIP64 end of central directory record
-const SIG_ZIP64_LOCATOR = 0x07064b50; // ZIP64 end of central directory locator
+const _SIG_ZIP64_EOCD = 0x06064b50; // ZIP64 end of central directory record
+const _SIG_ZIP64_LOCATOR = 0x07064b50; // ZIP64 end of central directory locator
 
 // Compression methods
 export const METHOD_STORED = 0; // No compression
@@ -47,13 +47,7 @@ function u16(buf: Uint8Array, off: number): number {
 
 function u32(buf: Uint8Array, off: number): number {
   if (off + 4 > buf.length) throw new RangeError(`u32 OOB at ${off}`);
-  return (
-    (buf[off]! |
-      (buf[off + 1]! << 8) |
-      (buf[off + 2]! << 16) |
-      (buf[off + 3]! << 24)) >>>
-    0
-  );
+  return (buf[off]! | (buf[off + 1]! << 8) | (buf[off + 2]! << 16) | (buf[off + 3]! << 24)) >>> 0;
 }
 
 function w16(buf: Uint8Array, off: number, v: number): void {
@@ -212,10 +206,7 @@ export function parseCentralDirectory(cd: Uint8Array): CdEntry[] {
     const nameBytes = cd.subarray(pos + 46, pos + 46 + nameLen);
     const name = new TextDecoder().decode(nameBytes);
     const extra = cd.subarray(pos + 46 + nameLen, pos + 46 + nameLen + extraLen);
-    const comment = cd.subarray(
-      pos + 46 + nameLen + extraLen,
-      entryEnd,
-    );
+    const comment = cd.subarray(pos + 46 + nameLen + extraLen, entryEnd);
 
     entries.push({
       name,
@@ -295,11 +286,7 @@ export function buildLocalEntry(name: string, data: Uint8Array): Uint8Array {
 /**
  * Build a Central Directory entry for a new file.
  */
-export function buildCdEntry(
-  name: string,
-  data: Uint8Array,
-  localOffset: number,
-): Uint8Array {
+export function buildCdEntry(name: string, data: Uint8Array, localOffset: number): Uint8Array {
   const nameBytes = new TextEncoder().encode(name);
   const crc = crc32(data);
   const size = data.length;
@@ -405,8 +392,7 @@ export async function appendToZip(
   );
 
   const newCdSize =
-    existingCdRaw.reduce((n, b) => n + b.length, 0) +
-    newCdBlocks.reduce((n, b) => n + b.length, 0);
+    existingCdRaw.reduce((n, b) => n + b.length, 0) + newCdBlocks.reduce((n, b) => n + b.length, 0);
   const newCdOffset = appendOffset;
   const newTotalEntries = existingEntries.length + files.length;
 
@@ -422,13 +408,7 @@ export async function appendToZip(
   w16(newEocd, 20, 0); // comment length
 
   // 7. Concatenate everything
-  return concat(
-    originalData,
-    ...newLocalBlocks,
-    ...existingCdRaw,
-    ...newCdBlocks,
-    newEocd,
-  );
+  return concat(originalData, ...newLocalBlocks, ...existingCdRaw, ...newCdBlocks, newEocd);
 }
 
 // ---------------------------------------------------------------------------
@@ -439,10 +419,7 @@ export async function appendToZip(
  * Extract file data for a given CD entry via range reads.
  * The local header is read first to find the actual data offset.
  */
-export async function readEntryData(
-  entry: CdEntry,
-  readRange: ZipReadRange,
-): Promise<Uint8Array> {
+export async function readEntryData(entry: CdEntry, readRange: ZipReadRange): Promise<Uint8Array> {
   // Local header is 30 bytes + name + extra; read enough to parse
   const headerSlice = await readRange(
     entry.localOffset,
@@ -461,7 +438,10 @@ export async function readEntryData(
     const writer = ds.writable.getWriter();
     const reader = ds.readable.getReader();
 
-    writer.write(raw).then(() => writer.close()).catch(() => writer.abort());
+    writer
+      .write(raw)
+      .then(() => writer.close())
+      .catch(() => writer.abort());
 
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -541,8 +521,7 @@ export async function appendToZipTail(
   );
 
   const newCdSize =
-    existingCdRaw.reduce((n, b) => n + b.length, 0) +
-    newCdBlocks.reduce((n, b) => n + b.length, 0);
+    existingCdRaw.reduce((n, b) => n + b.length, 0) + newCdBlocks.reduce((n, b) => n + b.length, 0);
   const newCdOffset = appendOffset;
   const newTotalEntries = existingEntries.length + files.length;
 
@@ -557,12 +536,7 @@ export async function appendToZipTail(
   w32(newEocd, 16, newCdOffset);
   w16(newEocd, 20, 0);
 
-  const tail = concat(
-    ...newLocalBlocks,
-    ...existingCdRaw,
-    ...newCdBlocks,
-    newEocd,
-  );
+  const tail = concat(...newLocalBlocks, ...existingCdRaw, ...newCdBlocks, newEocd);
 
   return { cdOffset: eocd.cdOffset, tail };
 }

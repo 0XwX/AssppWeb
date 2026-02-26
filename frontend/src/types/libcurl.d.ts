@@ -1,4 +1,4 @@
-declare module "libcurl.js" {
+declare module 'libcurl.js' {
   interface LibcurlResponse {
     ok: boolean;
     status: number;
@@ -6,7 +6,7 @@ declare module "libcurl.js" {
     headers: Headers;
     raw_headers: [string, string][];
     text(): Promise<string>;
-    json(): Promise<any>;
+    json(): Promise<unknown>;
     arrayBuffer(): Promise<ArrayBuffer>;
   }
 
@@ -14,7 +14,7 @@ declare module "libcurl.js" {
     method?: string;
     headers?: Record<string, string> | Headers;
     body?: string | ArrayBuffer | Uint8Array;
-    redirect?: "follow" | "manual" | "error";
+    redirect?: 'follow' | 'manual' | 'error';
     proxy?: string;
     _libcurl_verbose?: number;
     _libcurl_http_version?: number;
@@ -34,7 +34,7 @@ declare module "libcurl.js" {
   export const libcurl: Libcurl;
 }
 
-declare module "libcurl.js/bundled" {
-  import type { Libcurl } from "libcurl.js";
+declare module 'libcurl.js/bundled' {
+  import type { Libcurl } from 'libcurl.js';
   export const libcurl: Libcurl;
 }

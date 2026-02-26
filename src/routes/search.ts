@@ -57,9 +57,7 @@ function mapSoftware(item: Record<string, unknown>) {
 search.get('/search', async (c) => {
   try {
     const params = new URL(c.req.url).searchParams;
-    const response = await fetch(
-      `https://itunes.apple.com/search?${params.toString()}`,
-    );
+    const response = await fetch(`https://itunes.apple.com/search?${params.toString()}`);
     const text = await readWithLimit(response, MAX_SEARCH_BYTES);
     const data = JSON.parse(text) as { results?: Record<string, unknown>[] };
     return c.json((data.results ?? []).map(mapSoftware));
@@ -72,9 +70,7 @@ search.get('/search', async (c) => {
 search.get('/lookup', async (c) => {
   try {
     const params = new URL(c.req.url).searchParams;
-    const response = await fetch(
-      `https://itunes.apple.com/lookup?${params.toString()}`,
-    );
+    const response = await fetch(`https://itunes.apple.com/lookup?${params.toString()}`);
     const text = await readWithLimit(response, MAX_SEARCH_BYTES);
     const data = JSON.parse(text) as {
       resultCount?: number;

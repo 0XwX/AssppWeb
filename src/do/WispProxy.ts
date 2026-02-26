@@ -63,10 +63,7 @@ export class WispProxy extends DurableObject {
     });
   }
 
-  async webSocketMessage(
-    _ws: WebSocket,
-    message: ArrayBuffer | string,
-  ): Promise<void> {
+  async webSocketMessage(_ws: WebSocket, message: ArrayBuffer | string): Promise<void> {
     if (typeof message === 'string') return;
 
     const buf = new Uint8Array(message);
@@ -92,27 +89,17 @@ export class WispProxy extends DurableObject {
 
   async webSocketClose(_ws: WebSocket, _code: number): Promise<void> {
     await this.closeAllStreams();
-    await this.ctx.storage.setAlarm(Date.now() + 60_000);
   }
 
   async webSocketError(_ws: WebSocket, _error: unknown): Promise<void> {
     await this.closeAllStreams();
-    await this.ctx.storage.setAlarm(Date.now() + 60_000);
-  }
-
-  /** Self-cleanup: delete all storage so this DO instance can be fully reclaimed */
-  async alarm(): Promise<void> {
-    await this.ctx.storage.deleteAll();
   }
 
   // ---------------------------------------------------------------------------
   // CONNECT handler
   // ---------------------------------------------------------------------------
 
-  private async handleConnect(
-    streamId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
+  private async handleConnect(streamId: number, payload: Uint8Array): Promise<void> {
     if (payload.length < 4) {
       this.sendClose(streamId, CLOSE_REASON_INVALID_INFO);
       return;
@@ -124,20 +111,13 @@ export class WispProxy extends DurableObject {
     const hostname = new TextDecoder().decode(payload.subarray(3));
 
     // Only TCP (type=1) to port 443, allowlisted hosts
-    if (
-      streamType !== 1 ||
-      port !== 443 ||
-      !ALLOWED_HOSTS.some((r) => r.test(hostname))
-    ) {
+    if (streamType !== 1 || port !== 443 || !ALLOWED_HOSTS.some((r) => r.test(hostname))) {
       this.sendClose(streamId, CLOSE_REASON_INVALID_INFO);
       return;
     }
 
     try {
-      const socket = connect(
-        { hostname, port },
-        { secureTransport: 'off', allowHalfOpen: false },
-      );
+      const socket = connect({ hostname, port }, { secureTransport: 'off', allowHalfOpen: false });
 
       const writer = socket.writable.getWriter();
       this.streams.set(streamId, { writer });
@@ -155,10 +135,7 @@ export class WispProxy extends DurableObject {
     }
   }
 
-  private async pipeToWs(
-    streamId: number,
-    readable: ReadableStream<Uint8Array>,
-  ): Promise<void> {
+  private async pipeToWs(streamId: number, readable: ReadableStream<Uint8Array>): Promise<void> {
     const reader = readable.getReader();
     try {
       while (true) {
@@ -177,10 +154,7 @@ export class WispProxy extends DurableObject {
   // DATA handler
   // ---------------------------------------------------------------------------
 
-  private async handleData(
-    streamId: number,
-    payload: Uint8Array,
-  ): Promise<void> {
+  private async handleData(streamId: number, payload: Uint8Array): Promise<void> {
     const stream = this.streams.get(streamId);
     if (!stream) return;
     try {

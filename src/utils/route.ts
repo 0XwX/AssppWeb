@@ -11,10 +11,7 @@ export function requireAccountHash(c: Context): string | null {
   return hash;
 }
 
-export function requireAccountHashOrBody(
-  query: string | undefined,
-  body: unknown,
-): string | null {
+export function requireAccountHashOrBody(query: string | undefined, body: unknown): string | null {
   const hash =
     query ??
     (body && typeof body === 'object' && 'accountHash' in body

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { fetchAndSolveChallenge } from '../utils/pow';
 
 interface AuthState {
   /** null = checking, true = authenticated or no auth needed, false = need login */
@@ -7,6 +8,8 @@ interface AuthState {
   required: boolean;
   /** Whether first-time password setup is needed */
   setup: boolean;
+  /** Whether PoW is being solved */
+  solving: boolean;
 
   checkAuth: () => Promise<void>;
   login: (password: string) => Promise<{ ok: boolean; error?: string }>;
@@ -22,6 +25,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   authenticated: null,
   required: false,
   setup: false,
+  solving: false,
 
   checkAuth: async () => {
     try {
@@ -41,17 +45,18 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ authenticated: false, required: true, setup: false });
       }
     } catch {
-      // Network error — require login (API calls will also fail with proper error)
       set({ authenticated: false, required: true, setup: false });
     }
   },
 
   login: async (password: string) => {
+    set({ solving: true });
     try {
+      const { challenge, nonce } = await fetchAndSolveChallenge();
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, challenge, nonce }),
       });
       if (res.ok) {
         set({ authenticated: true });
@@ -60,15 +65,19 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { ok: false, error: 'invalid' };
     } catch {
       return { ok: false, error: 'network' };
+    } finally {
+      set({ solving: false });
     }
   },
 
   setupPassword: async (password: string) => {
+    set({ solving: true });
     try {
+      const { challenge, nonce } = await fetchAndSolveChallenge();
       const res = await fetch('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, challenge, nonce }),
       });
       if (res.ok) {
         set({ authenticated: true, required: true, setup: false });
@@ -77,6 +86,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { ok: false, error: 'failed' };
     } catch {
       return { ok: false, error: 'network' };
+    } finally {
+      set({ solving: false });
     }
   },
 
@@ -86,17 +97,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   changePassword: async (currentPassword: string, newPassword: string) => {
+    set({ solving: true });
     try {
+      const { challenge, nonce } = await fetchAndSolveChallenge();
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword, challenge, nonce }),
       });
       if (res.ok) return { ok: true };
       if (res.status === 401) return { ok: false, error: 'incorrect' };
       return { ok: false, error: 'failed' };
     } catch {
       return { ok: false, error: 'network' };
+    } finally {
+      set({ solving: false });
     }
   },
 }));

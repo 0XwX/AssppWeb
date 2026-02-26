@@ -16,7 +16,8 @@
     "currentPassword": "Current Password",
     "newPassword": "New Password",
     "passwordChanged": "Password changed successfully.",
-    "changeFailed": "Failed to change password."
+    "changeFailed": "Failed to change password.",
+    "solving": "Verifying..."
   },
   "theme": {
     "light": "Light Mode",
@@ -149,7 +150,7 @@
   "downloads": {
     "title": "Downloads",
     "new": "New Download",
-    "warning": "Packages are temporary and will be cleared on server restart. Download or install promptly.",
+    "storageUsage": "Cloud storage usage: {{size}}",
     "loading": "Loading downloads...",
     "emptyAll": "No downloads yet.",
     "emptyAllDesc": "Your download queue is empty. Head to the search page to explore and download the apps you need.",

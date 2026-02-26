@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { useTranslation } from 'react-i18next';
 
 export default function CountrySelect({
   value,
@@ -6,7 +6,7 @@ export default function CountrySelect({
   availableCountryCodes,
   allCountryCodes,
   disabled,
-  className = "",
+  className = '',
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -25,7 +25,7 @@ export default function CountrySelect({
       disabled={disabled}
     >
       {availableCountryCodes.length > 0 && (
-        <optgroup label={t("regions.available")}>
+        <optgroup label={t('regions.available')}>
           {availableCountryCodes.map((c) => (
             <option key={`avail-${c}`} value={c}>
               {t(`countries.${c}`, c)} ({c})
@@ -33,7 +33,7 @@ export default function CountrySelect({
           ))}
         </optgroup>
       )}
-      <optgroup label={t("regions.all")}>
+      <optgroup label={t('regions.all')}>
         {allCountryCodes.map((c) => (
           <option key={`all-${c}`} value={c}>
             {t(`countries.${c}`, c)} ({c})

@@ -38,10 +38,7 @@ downloads.post('/downloads', async (c) => {
     });
     return c.json(task, 201);
   } catch (err) {
-    return c.json(
-      { error: err instanceof Error ? err.message : 'Failed to create download' },
-      400,
-    );
+    return c.json({ error: err instanceof Error ? err.message : 'Failed to create download' }, 400);
   }
 });
 

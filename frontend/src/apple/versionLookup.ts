@@ -1,8 +1,9 @@
-import type { Account, Software, VersionMetadata } from "../types";
-import { appleRequest } from "./request";
-import { buildPlist, parsePlist } from "./plist";
-import { extractAndMergeCookies } from "./cookies";
-import { storeAPIHost } from "./config";
+import type { Account, Software, VersionMetadata } from '../types';
+import { appleRequest } from './request';
+import type { PlistDict } from './plist';
+import { buildPlist, parsePlist } from './plist';
+import { extractAndMergeCookies } from './cookies';
+import { storeAPIHost } from './config';
 
 export async function getVersionMetadata(
   account: Account,
@@ -20,8 +21,8 @@ export async function getVersionMetadata(
   let redirectAttempt = 0;
 
   while (redirectAttempt <= 3) {
-    const payload: Record<string, any> = {
-      creditDisplay: "",
+    const payload: PlistDict = {
+      creditDisplay: '',
       guid: deviceId,
       salableAdamId: app.id,
       externalVersionId: versionId,
@@ -30,13 +31,13 @@ export async function getVersionMetadata(
     const plistBody = buildPlist(payload);
 
     const headers: Record<string, string> = {
-      "Content-Type": "application/x-apple-plist",
-      "iCloud-DSID": account.directoryServicesIdentifier,
-      "X-Dsid": account.directoryServicesIdentifier,
+      'Content-Type': 'application/x-apple-plist',
+      'iCloud-DSID': account.directoryServicesIdentifier,
+      'X-Dsid': account.directoryServicesIdentifier,
     };
 
     const response = await appleRequest({
-      method: "POST",
+      method: 'POST',
       host: requestHost,
       path: requestPath,
       headers,
@@ -47,9 +48,9 @@ export async function getVersionMetadata(
     cookies = extractAndMergeCookies(response.rawHeaders, cookies);
 
     if (response.status === 302) {
-      const location = response.headers["location"];
+      const location = response.headers['location'];
       if (!location) {
-        throw new Error("Failed to retrieve redirect location");
+        throw new Error('Failed to retrieve redirect location');
       }
       const url = new URL(location);
       requestHost = url.hostname;
@@ -58,26 +59,25 @@ export async function getVersionMetadata(
       continue;
     }
 
-    const dict = parsePlist(response.body) as Record<string, any>;
+    const dict = parsePlist(response.body) as PlistDict;
 
-    const songList = dict.songList as Record<string, any>[] | undefined;
+    const songList = dict.songList as PlistDict[] | undefined;
     if (!songList || songList.length === 0) {
-      throw new Error("No items in response");
+      throw new Error('No items in response');
     }
 
     const item = songList[0];
-    const itemMetadata = item.metadata as Record<string, any>;
+    const itemMetadata = item.metadata as PlistDict | undefined;
     if (!itemMetadata) {
-      throw new Error("Missing metadata");
+      throw new Error('Missing metadata');
     }
 
-    const bundleShortVersionString =
-      itemMetadata.bundleShortVersionString as string;
+    const bundleShortVersionString = itemMetadata.bundleShortVersionString as string;
     if (!bundleShortVersionString) {
-      throw new Error("Missing bundleShortVersionString");
+      throw new Error('Missing bundleShortVersionString');
     }
 
-    const assetInfo = item['asset-info'] as Record<string, any> | undefined;
+    const assetInfo = item['asset-info'] as PlistDict | undefined;
     const rawSize = assetInfo?.['file-size'];
     const fileSize = rawSize != null ? Number(rawSize) : undefined;
 
@@ -90,5 +90,5 @@ export async function getVersionMetadata(
     };
   }
 
-  throw new Error("Too many redirects");
+  throw new Error('Too many redirects');
 }

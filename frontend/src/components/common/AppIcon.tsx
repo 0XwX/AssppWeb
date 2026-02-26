@@ -1,18 +1,18 @@
-import { useState } from "react";
+import { useState } from 'react';
 
 interface AppIconProps {
   url?: string;
   name: string;
-  size?: "sm" | "md" | "lg";
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const sizeClasses = {
-  sm: "w-10 h-10 rounded-lg",
-  md: "w-14 h-14 rounded-xl",
-  lg: "w-20 h-20 rounded-2xl",
+  sm: 'w-10 h-10 rounded-lg',
+  md: 'w-14 h-14 rounded-xl',
+  lg: 'w-20 h-20 rounded-2xl',
 };
 
-export default function AppIcon({ url, name, size = "md" }: AppIconProps) {
+export default function AppIcon({ url, name, size = 'md' }: AppIconProps) {
   const [failed, setFailed] = useState(false);
 
   if (!url || failed) {

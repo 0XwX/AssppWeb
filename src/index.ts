@@ -67,11 +67,7 @@ app.get('*', async (c) => {
 // Scheduled handler — R2 cleanup cron
 // ---------------------------------------------------------------------------
 
-async function scheduled(
-  _event: ScheduledEvent,
-  env: Env,
-  _ctx: ExecutionContext,
-): Promise<void> {
+async function scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
   const stub = dm(env);
 
   // DO config overrides env vars

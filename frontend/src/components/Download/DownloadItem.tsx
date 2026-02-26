@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import AppIcon from "../common/AppIcon";
-import Badge from "../common/Badge";
-import ProgressBar from "../common/ProgressBar";
-import type { DownloadTask } from "../../types";
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import AppIcon from '../common/AppIcon';
+import Badge from '../common/Badge';
+import ProgressBar from '../common/ProgressBar';
+import type { DownloadTask } from '../../types';
 
 interface DownloadItemProps {
   task: DownloadTask;
@@ -12,26 +12,17 @@ interface DownloadItemProps {
   onDelete: (id: string) => void;
 }
 
-export default function DownloadItem({
-  task,
-  onPause,
-  onResume,
-  onDelete,
-}: DownloadItemProps) {
+export default function DownloadItem({ task, onPause, onResume, onDelete }: DownloadItemProps) {
   const { t } = useTranslation();
 
-  const isActive = task.status === "downloading" || task.status === "injecting";
-  const isPaused = task.status === "paused";
-  const isCompleted = task.status === "completed";
+  const isActive = task.status === 'downloading' || task.status === 'injecting';
+  const isPaused = task.status === 'paused';
+  const isCompleted = task.status === 'completed';
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-3">
       <div className="flex gap-3">
-        <AppIcon
-          url={task.software.artworkUrl}
-          name={task.software.name}
-          size="sm"
-        />
+        <AppIcon url={task.software.artworkUrl} name={task.software.name} size="sm" />
         <div className="flex-1 min-w-0">
           {/* Added gap-3 and items-start to prevent layout shifting, set title container to flex-1 min-w-0 */}
           <div className="flex items-start justify-between gap-3">
@@ -75,7 +66,7 @@ export default function DownloadItem({
                 onClick={() => onPause(task.id)}
                 className="px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm transition-colors"
               >
-                {t("downloads.package.pause")}
+                {t('downloads.package.pause')}
               </button>
             )}
             {isPaused && (
@@ -83,7 +74,7 @@ export default function DownloadItem({
                 onClick={() => onResume(task.id)}
                 className="px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-800/60 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 shadow-sm transition-colors"
               >
-                {t("downloads.package.resume")}
+                {t('downloads.package.resume')}
               </button>
             )}
             {isCompleted && task.hasFile && (
@@ -91,14 +82,14 @@ export default function DownloadItem({
                 to={`/downloads/${task.id}`}
                 className="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-800 border border-blue-200 dark:border-blue-800/60 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 shadow-sm transition-colors"
               >
-                {t("downloads.item.viewPackage")}
+                {t('downloads.item.viewPackage')}
               </Link>
             )}
             <button
               onClick={() => onDelete(task.id)}
               className="px-3 py-1.5 text-xs font-medium text-red-600 dark:text-red-400 bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 shadow-sm transition-colors"
             >
-              {t("downloads.package.delete")}
+              {t('downloads.package.delete')}
             </button>
           </div>
         </div>

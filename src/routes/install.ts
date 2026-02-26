@@ -13,9 +13,7 @@ function getBaseUrl(req: Request): string {
 
   if (!sanitizedHost.includes(':')) {
     const port = req.headers.get('x-forwarded-port')?.replace(/\D/g, '');
-    const isDefault =
-      (proto === 'https' && port === '443') ||
-      (proto === 'http' && port === '80');
+    const isDefault = (proto === 'https' && port === '443') || (proto === 'http' && port === '80');
     if (port && !isDefault) {
       return `${proto}://${sanitizedHost}:${port}`;
     }
@@ -83,7 +81,7 @@ install.get('/install/:id/payload.ipa', async (c) => {
 });
 
 // GET /install/:id/icon-small.png
-install.get('/install/:id/icon-small.png', (c) => {
+install.get('/install/:id/icon-small.png', (_c) => {
   const png = getWhitePng();
   return new Response(png, {
     headers: {
@@ -94,7 +92,7 @@ install.get('/install/:id/icon-small.png', (c) => {
 });
 
 // GET /install/:id/icon-large.png
-install.get('/install/:id/icon-large.png', (c) => {
+install.get('/install/:id/icon-large.png', (_c) => {
   const png = getWhitePng();
   return new Response(png, {
     headers: {

@@ -16,7 +16,8 @@
     "currentPassword": "当前密码",
     "newPassword": "新密码",
     "passwordChanged": "密码修改成功。",
-    "changeFailed": "修改密码失败。"
+    "changeFailed": "修改密码失败。",
+    "solving": "验证中..."
   },
   "theme": {
     "light": "日间模式",
@@ -149,7 +150,7 @@
   "downloads": {
     "title": "下载",
     "new": "新建下载",
-    "warning": "安装包是临时的，将在服务器重启时被清除。请及时下载或安装。",
+    "storageUsage": "云端存储占用: {{size}}",
     "loading": "加载下载中...",
     "emptyAll": "暂无下载。",
     "emptyAllDesc": "您的下载队列为空。前往搜索页面探索并下载您需要的应用吧。",

@@ -1,6 +1,6 @@
-import { ReactNode, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { useSearch } from "../../hooks/useSearch";
+import { ReactNode, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { useSearch } from '../../hooks/useSearch';
 
 interface PageContainerProps {
   title?: string;
@@ -8,17 +8,13 @@ interface PageContainerProps {
   action?: ReactNode;
 }
 
-export default function PageContainer({
-  title,
-  children,
-  action,
-}: PageContainerProps) {
+export default function PageContainer({ title, children, action }: PageContainerProps) {
   const location = useLocation();
   const clearSearch = useSearch((state) => state.clear);
 
   // 监听路由变化，如果当前路径不在 /search 下，则清空之前的搜索内容
   useEffect(() => {
-    if (!location.pathname.startsWith("/search")) {
+    if (!location.pathname.startsWith('/search')) {
       clearSearch();
     }
   }, [location.pathname, clearSearch]);
@@ -28,11 +24,7 @@ export default function PageContainer({
       <div className="max-w-5xl mx-auto px-4 py-6 sm:px-6">
         {(title || action) && (
           <div className="flex items-center justify-between mb-6">
-            {title && (
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {title}
-              </h1>
-            )}
+            {title && <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{title}</h1>}
             {action && <div>{action}</div>}
           </div>
         )}

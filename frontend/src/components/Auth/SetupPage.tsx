@@ -1,15 +1,16 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { useTranslation } from "react-i18next";
-import Spinner from "../common/Spinner";
-import { useAuthStore } from "../../store/auth";
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import Spinner from '../common/Spinner';
+import { useAuthStore } from '../../store/auth';
 
 export default function SetupPage() {
   const { t } = useTranslation();
   const setupPassword = useAuthStore((s) => s.setupPassword);
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const solving = useAuthStore((s) => s.solving);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -17,16 +18,16 @@ export default function SetupPage() {
     if (!password) return;
 
     if (password !== confirmPassword) {
-      setError(t("auth.passwordMismatch"));
+      setError(t('auth.passwordMismatch'));
       return;
     }
 
-    setError("");
+    setError('');
     setLoading(true);
     const result = await setupPassword(password);
     setLoading(false);
     if (!result.ok) {
-      setError(t("auth.setupFailed"));
+      setError(t('auth.setupFailed'));
     }
   };
 
@@ -49,12 +50,8 @@ export default function SetupPage() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Asspp Web
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t("auth.setupPrompt")}
-          </p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Asspp Web</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('auth.setupPrompt')}</p>
         </div>
 
         {error && (
@@ -66,7 +63,7 @@ export default function SetupPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("auth.passwordPlaceholder")}
+              {t('auth.passwordPlaceholder')}
             </label>
             <input
               type="password"
@@ -78,7 +75,7 @@ export default function SetupPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("auth.confirmPassword")}
+              {t('auth.confirmPassword')}
             </label>
             <input
               type="password"
@@ -93,7 +90,7 @@ export default function SetupPage() {
             className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
             {loading && <Spinner />}
-            {t("auth.setupButton")}
+            {solving ? t('auth.solving') : t('auth.setupButton')}
           </button>
         </form>
       </div>

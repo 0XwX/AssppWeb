@@ -5,28 +5,27 @@
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": "./frontend/dist",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
   },
   "durable_objects": {
     "bindings": [
       { "name": "WISP_PROXY", "class_name": "WispProxy" },
-      { "name": "DOWNLOAD_MANAGER", "class_name": "DownloadManager" }
-    ]
+      { "name": "DOWNLOAD_MANAGER", "class_name": "DownloadManager" },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["WispProxy", "DownloadManager"]
-    }
+      "new_sqlite_classes": ["WispProxy", "DownloadManager"],
+    },
   ],
-  "r2_buckets": [
-    { "binding": "IPA_BUCKET", "bucket_name": "assppweb-ipa" }
-  ],
+  "kv_namespaces": [{ "binding": "AUTH_KV", "id": "a25d3a8bd8244d12a6ea3dd2a93cb917" }],
+  "r2_buckets": [{ "binding": "IPA_BUCKET", "bucket_name": "assppweb-ipa" }],
   "triggers": {
-    "crons": ["0 2 * * *"]
+    "crons": ["0 2 * * *"],
   },
   "vars": {
-    "AUTO_CLEANUP_DAYS": "7",
-    "AUTO_CLEANUP_MAX_MB": "5120"
-  }
+    "AUTO_CLEANUP_DAYS": "2",
+    "AUTO_CLEANUP_MAX_MB": "8192",
+  },
 }

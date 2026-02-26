@@ -6,8 +6,7 @@ const bag = new Hono<{ Bindings: Env }>();
 bag.get('/bag', async (c) => {
   const guid = c.req.query('guid');
   if (!guid) return c.json({ error: 'Missing guid parameter' }, 400);
-  if (!/^[a-fA-F0-9]+$/.test(guid))
-    return c.json({ error: 'Invalid guid format' }, 400);
+  if (!/^[a-fA-F0-9]+$/.test(guid)) return c.json({ error: 'Invalid guid format' }, 400);
 
   const url = `https://init.itunes.apple.com/bag.xml?guid=${encodeURIComponent(guid)}`;
 

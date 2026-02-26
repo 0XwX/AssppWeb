@@ -1,25 +1,26 @@
-import { useState } from "react";
-import type { FormEvent } from "react";
-import { useTranslation } from "react-i18next";
-import Spinner from "../common/Spinner";
-import { useAuthStore } from "../../store/auth";
+import { useState } from 'react';
+import type { FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import Spinner from '../common/Spinner';
+import { useAuthStore } from '../../store/auth';
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const login = useAuthStore((s) => s.login);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const solving = useAuthStore((s) => s.solving);
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!password) return;
-    setError("");
+    setError('');
     setLoading(true);
     const result = await login(password);
     setLoading(false);
     if (!result.ok) {
-      setError(t("auth.invalidPassword"));
+      setError(t('auth.invalidPassword'));
     }
   };
 
@@ -42,12 +43,8 @@ export default function LoginPage() {
               />
             </svg>
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Asspp Web
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {t("auth.loginPrompt")}
-          </p>
+          <h1 className="text-xl font-semibold text-gray-900 dark:text-white">Asspp Web</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('auth.loginPrompt')}</p>
         </div>
 
         {error && (
@@ -61,7 +58,7 @@ export default function LoginPage() {
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder={t("auth.passwordPlaceholder")}
+            placeholder={t('auth.passwordPlaceholder')}
             autoFocus
             className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
           />
@@ -71,7 +68,7 @@ export default function LoginPage() {
             className="w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
           >
             {loading && <Spinner />}
-            {t("auth.loginButton")}
+            {solving ? t('auth.solving') : t('auth.loginButton')}
           </button>
         </form>
       </div>

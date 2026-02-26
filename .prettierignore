@@ -1,0 +1,7 @@
+node_modules
+.wrangler
+coverage
+*.lock
+pnpm-lock.yaml
+dist
+frontend/dist

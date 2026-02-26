@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
-import PageContainer from "../Layout/PageContainer";
-import Modal from "../common/Modal";
-import { useAccountsStore } from "../../store/accounts";
-import { useAuthStore } from "../../store/auth";
-import { useToastStore } from "../../store/toast";
-import { encryptData, decryptData } from "../../utils/crypto";
-import { countryCodeMap } from "../../apple/config";
-import type { Account } from "../../types";
+import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
+import PageContainer from '../Layout/PageContainer';
+import Modal from '../common/Modal';
+import { useAccountsStore } from '../../store/accounts';
+import { useAuthStore } from '../../store/auth';
+import { useToastStore } from '../../store/toast';
+import { encryptData, decryptData } from '../../utils/crypto';
+import { countryCodeMap } from '../../apple/config';
+import type { Account } from '../../types';
 
 interface ServerInfo {
   buildCommit?: string;
@@ -17,57 +17,57 @@ interface ServerInfo {
 }
 
 const entityTypes = [
-  { value: "software", label: "iPhone" },
-  { value: "iPadSoftware", label: "iPad" },
+  { value: 'software', label: 'iPhone' },
+  { value: 'iPadSoftware', label: 'iPad' },
 ];
 
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const { accounts, addAccount, updateAccount } = useAccountsStore();
-  const { required, logout, changePassword } = useAuthStore();
+  const { required, solving, logout, changePassword } = useAuthStore();
   const addToast = useToastStore((s) => s.addToast);
 
   const [country, setCountry] = useState(
-    () => localStorage.getItem("asspp-default-country") || "US",
+    () => localStorage.getItem('asspp-default-country') || 'US',
   );
   const [entity, setEntity] = useState(
-    () => localStorage.getItem("asspp-default-entity") || "software",
+    () => localStorage.getItem('asspp-default-entity') || 'software',
   );
   const [serverInfo, setServerInfo] = useState<ServerInfo | null>(null);
 
   const [exportModalOpen, setExportModalOpen] = useState(false);
-  const [exportPassword, setExportPassword] = useState("");
-  const [exportConfirmPassword, setExportConfirmPassword] = useState("");
+  const [exportPassword, setExportPassword] = useState('');
+  const [exportConfirmPassword, setExportConfirmPassword] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importPassword, setImportPassword] = useState("");
-  const [importFileData, setImportFileData] = useState("");
+  const [importPassword, setImportPassword] = useState('');
+  const [importFileData, setImportFileData] = useState('');
 
   const [conflictModalOpen, setConflictModalOpen] = useState(false);
   const [pendingAccounts, setPendingAccounts] = useState<Account[]>([]);
   const [conflictStats, setConflictStats] = useState({ conflict: 0, new: 0 });
 
   const [changePasswordModalOpen, setChangePasswordModalOpen] = useState(false);
-  const [currentPwd, setCurrentPwd] = useState("");
-  const [newPwd, setNewPwd] = useState("");
-  const [confirmNewPwd, setConfirmNewPwd] = useState("");
+  const [currentPwd, setCurrentPwd] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmNewPwd, setConfirmNewPwd] = useState('');
   const [changePwdLoading, setChangePwdLoading] = useState(false);
 
-  const [editCleanupDays, setEditCleanupDays] = useState("");
-  const [editCleanupMaxMB, setEditCleanupMaxMB] = useState("");
+  const [editCleanupDays, setEditCleanupDays] = useState('');
+  const [editCleanupMaxMB, setEditCleanupMaxMB] = useState('');
   const [savingCleanup, setSavingCleanup] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem("asspp-default-country", country);
+    localStorage.setItem('asspp-default-country', country);
   }, [country]);
 
   useEffect(() => {
-    localStorage.setItem("asspp-default-entity", entity);
+    localStorage.setItem('asspp-default-entity', entity);
   }, [entity]);
 
   useEffect(() => {
-    fetch("/api/settings")
+    fetch('/api/settings')
       .then((r) => (r.ok ? r.json() : null))
       .then((info: ServerInfo | null) => {
         setServerInfo(info);
@@ -85,25 +85,25 @@ export default function SettingsPage() {
 
   const handleExport = async () => {
     if (exportPassword !== exportConfirmPassword) {
-      addToast(t("settings.data.passwordMismatch"), "error");
+      addToast(t('settings.data.passwordMismatch'), 'error');
       return;
     }
     try {
       const encrypted = await encryptData(accounts, exportPassword);
-      const blob = new Blob([encrypted], { type: "text/plain" });
+      const blob = new Blob([encrypted], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      a.download = "asspp-accounts.enc";
+      a.download = 'asspp-accounts.enc';
       a.click();
       URL.revokeObjectURL(url);
 
       setExportModalOpen(false);
-      setExportPassword("");
-      setExportConfirmPassword("");
-      addToast(t("settings.data.exportSuccess"), "success");
+      setExportPassword('');
+      setExportConfirmPassword('');
+      addToast(t('settings.data.exportSuccess'), 'success');
     } catch {
-      addToast(t("settings.data.exportFailed"), "error");
+      addToast(t('settings.data.exportFailed'), 'error');
     }
   };
 
@@ -118,29 +118,30 @@ export default function SettingsPage() {
       setImportModalOpen(true);
     };
     reader.readAsText(file);
-    e.target.value = "";
+    e.target.value = '';
   };
 
   const handleImport = async () => {
     try {
       const parsed = await decryptData(importFileData, importPassword);
-      if (!Array.isArray(parsed)) throw new Error("Invalid format");
+      if (!Array.isArray(parsed)) throw new Error('Invalid format');
       const valid = parsed.filter(
-        (item: any) =>
+        (item: unknown) =>
           item &&
-          typeof item === "object" &&
-          typeof item.email === "string" &&
-          item.email.length > 0,
+          typeof item === 'object' &&
+          'email' in item &&
+          typeof (item as Record<string, unknown>).email === 'string' &&
+          ((item as Record<string, unknown>).email as string).length > 0,
       ) as Account[];
-      if (valid.length === 0) throw new Error("No valid accounts found");
+      if (valid.length === 0) throw new Error('No valid accounts found');
 
       if (accounts.length === 0) {
         for (const acc of valid) {
           await addAccount(acc);
         }
-        addToast(t("settings.data.importSuccess"), "success");
+        addToast(t('settings.data.importSuccess'), 'success');
         setImportModalOpen(false);
-        setImportPassword("");
+        setImportPassword('');
       } else {
         let conflictCount = 0;
         let newCount = 0;
@@ -153,19 +154,19 @@ export default function SettingsPage() {
           setConflictStats({ conflict: conflictCount, new: newCount });
           setPendingAccounts(valid);
           setImportModalOpen(false);
-          setImportPassword("");
+          setImportPassword('');
           setConflictModalOpen(true);
         } else {
           for (const acc of valid) {
             await addAccount(acc);
           }
-          addToast(t("settings.data.importSuccess"), "success");
+          addToast(t('settings.data.importSuccess'), 'success');
           setImportModalOpen(false);
-          setImportPassword("");
+          setImportPassword('');
         }
       }
     } catch {
-      addToast(t("settings.data.incorrectPassword"), "error");
+      addToast(t('settings.data.incorrectPassword'), 'error');
     }
   };
 
@@ -180,36 +181,36 @@ export default function SettingsPage() {
     }
     setConflictModalOpen(false);
     setPendingAccounts([]);
-    addToast(t("settings.data.importSuccess"), "success");
+    addToast(t('settings.data.importSuccess'), 'success');
   };
 
   const handleChangePassword = async () => {
     if (newPwd !== confirmNewPwd) {
-      addToast(t("auth.passwordMismatch"), "error");
+      addToast(t('auth.passwordMismatch'), 'error');
       return;
     }
     setChangePwdLoading(true);
     const result = await changePassword(currentPwd, newPwd);
     setChangePwdLoading(false);
     if (result.ok) {
-      addToast(t("auth.passwordChanged"), "success");
+      addToast(t('auth.passwordChanged'), 'success');
       setChangePasswordModalOpen(false);
-      setCurrentPwd("");
-      setNewPwd("");
-      setConfirmNewPwd("");
-    } else if (result.error === "incorrect") {
-      addToast(t("auth.invalidPassword"), "error");
+      setCurrentPwd('');
+      setNewPwd('');
+      setConfirmNewPwd('');
+    } else if (result.error === 'incorrect') {
+      addToast(t('auth.invalidPassword'), 'error');
     } else {
-      addToast(t("auth.changeFailed"), "error");
+      addToast(t('auth.changeFailed'), 'error');
     }
   };
 
   const handleSaveCleanup = async () => {
     setSavingCleanup(true);
     try {
-      const res = await fetch("/api/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           autoCleanupDays: parseInt(editCleanupDays) || 0,
           autoCleanupMaxMB: parseInt(editCleanupMaxMB) || 0,
@@ -221,12 +222,12 @@ export default function SettingsPage() {
           autoCleanupMaxMB: number;
         };
         setServerInfo((prev) => (prev ? { ...prev, ...updated } : prev));
-        addToast(t("settings.server.saved"), "success");
+        addToast(t('settings.server.saved'), 'success');
       } else {
-        addToast(t("settings.server.saveFailed"), "error");
+        addToast(t('settings.server.saveFailed'), 'error');
       }
     } catch {
-      addToast(t("settings.server.saveFailed"), "error");
+      addToast(t('settings.server.saveFailed'), 'error');
     }
     setSavingCleanup(false);
   };
@@ -241,11 +242,11 @@ export default function SettingsPage() {
   };
 
   return (
-    <PageContainer title={t("settings.title")}>
+    <PageContainer title={t('settings.title')}>
       <div className="space-y-6">
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.language.title")}
+            {t('settings.language.title')}
           </h2>
           <div className="space-y-4">
             <div>
@@ -253,15 +254,15 @@ export default function SettingsPage() {
                 htmlFor="language"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                {t("settings.language.label")}
+                {t('settings.language.label')}
               </label>
               <select
                 id="language"
-                value={i18n.resolvedLanguage || "en-US"}
+                value={i18n.resolvedLanguage || 'en-US'}
                 onChange={async (e) => {
                   const newLang = e.target.value;
                   await i18n.changeLanguage(newLang);
-                  addToast(t("settings.language.changed"), "success");
+                  addToast(t('settings.language.changed'), 'success');
                 }}
                 className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               >
@@ -278,7 +279,7 @@ export default function SettingsPage() {
 
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.defaults.title")}
+            {t('settings.defaults.title')}
           </h2>
           <div className="space-y-4">
             <div>
@@ -286,14 +287,14 @@ export default function SettingsPage() {
                 htmlFor="country"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                {t("settings.defaults.country")}
+                {t('settings.defaults.country')}
               </label>
               <select
                 id="country"
                 value={country}
                 onChange={(e) => {
                   setCountry(e.target.value);
-                  addToast(t("settings.defaults.countryChanged"), "success");
+                  addToast(t('settings.defaults.countryChanged'), 'success');
                 }}
                 className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               >
@@ -309,14 +310,14 @@ export default function SettingsPage() {
                 htmlFor="entity"
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                {t("settings.defaults.entity")}
+                {t('settings.defaults.entity')}
               </label>
               <select
                 id="entity"
                 value={entity}
                 onChange={(e) => {
                   setEntity(e.target.value);
-                  addToast(t("settings.defaults.entityChanged"), "success");
+                  addToast(t('settings.defaults.entityChanged'), 'success');
                 }}
                 className="block w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
               >
@@ -332,37 +333,37 @@ export default function SettingsPage() {
 
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.server.title")}
+            {t('settings.server.title')}
           </h2>
           {serverInfo ? (
             <dl className="space-y-3">
               {required && (
                 <div>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                    {t("settings.server.accessPassword")}
+                    {t('settings.server.accessPassword')}
                   </dt>
-                  <dd className="text-sm text-gray-900 dark:text-gray-200 flex items-center gap-2 mt-1">
+                  <dd className="flex items-center gap-2 mt-1.5">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                      {t("settings.server.enabled")}
+                      {t('settings.server.enabled')}
                     </span>
                     <button
                       onClick={() => setChangePasswordModalOpen(true)}
-                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                      className="px-3 py-1 text-xs font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-800 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                     >
-                      {t("auth.changePasswordBtn")}
+                      {t('auth.changePasswordBtn')}
                     </button>
                     <button
                       onClick={handleLogout}
-                      className="text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                      className="px-3 py-1 text-xs font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 rounded-md hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                     >
-                      {t("auth.logout")}
+                      {t('auth.logout')}
                     </button>
                   </dd>
                 </div>
               )}
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  {t("settings.server.cleanupDays")}
+                  {t('settings.server.cleanupDays')}
                 </dt>
                 <dd>
                   <input
@@ -373,13 +374,13 @@ export default function SettingsPage() {
                     className="w-32 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   />
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    {t("settings.server.cleanupDaysHint")}
+                    {t('settings.server.cleanupDaysHint')}
                   </p>
                 </dd>
               </div>
               <div>
                 <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  {t("settings.server.cleanupMaxMB")}
+                  {t('settings.server.cleanupMaxMB')}
                 </dt>
                 <dd>
                   <input
@@ -390,7 +391,7 @@ export default function SettingsPage() {
                     className="w-32 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-900 dark:text-white font-mono focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                   />
                   <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    {t("settings.server.cleanupMaxMBHint")}
+                    {t('settings.server.cleanupMaxMBHint')}
                   </p>
                 </dd>
               </div>
@@ -401,24 +402,24 @@ export default function SettingsPage() {
                     disabled={savingCleanup}
                     className="px-4 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
                   >
-                    {t("settings.server.saveCleanup")}
+                    {t('settings.server.saveCleanup')}
                   </button>
                 </div>
               )}
             </dl>
           ) : (
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              {t("settings.server.offline")}
+              {t('settings.server.offline')}
             </p>
           )}
         </section>
 
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.data.title")}
+            {t('settings.data.title')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-            {t("settings.data.description")}
+            {t('settings.data.description')}
           </p>
 
           <div className="flex flex-wrap gap-3 mb-6">
@@ -426,13 +427,13 @@ export default function SettingsPage() {
               onClick={() => setExportModalOpen(true)}
               className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
             >
-              {t("settings.data.exportBtn")}
+              {t('settings.data.exportBtn')}
             </button>
             <button
               onClick={() => fileInputRef.current?.click()}
               className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
             >
-              {t("settings.data.importBtn")}
+              {t('settings.data.importBtn')}
             </button>
             <input
               type="file"
@@ -445,44 +446,43 @@ export default function SettingsPage() {
 
           <button
             onClick={() => {
-              if (!confirm(t("settings.data.confirm"))) return;
+              if (!confirm(t('settings.data.confirm'))) return;
               localStorage.clear();
-              indexedDB.deleteDatabase("asspp-accounts");
-              addToast(t("settings.data.cleared"), "success");
+              indexedDB.deleteDatabase('asspp-accounts');
+              addToast(t('settings.data.cleared'), 'success');
               setTimeout(() => {
-                window.location.href = "/";
+                window.location.href = '/';
               }, 1000);
             }}
             className="px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 border border-red-300 dark:border-red-800 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
           >
-            {t("settings.data.button")}
+            {t('settings.data.button')}
           </button>
         </section>
 
         <section className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t("settings.about.title")}
+            {t('settings.about.title')}
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            {t("settings.about.description")}
+            {t('settings.about.description')}
           </p>
           {serverInfo && (
             <dl className="mt-3 space-y-2">
-              {serverInfo.buildCommit &&
-                serverInfo.buildCommit !== "unknown" && (
-                  <div>
-                    <dt className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                      {t("settings.about.buildCommit")}
-                    </dt>
-                    <dd className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                      {serverInfo.buildCommit.slice(0, 7)}
-                    </dd>
-                  </div>
-                )}
-              {serverInfo.buildDate && serverInfo.buildDate !== "unknown" && (
+              {serverInfo.buildCommit && serverInfo.buildCommit !== 'unknown' && (
                 <div>
                   <dt className="text-xs font-medium text-gray-400 dark:text-gray-500">
-                    {t("settings.about.buildDate")}
+                    {t('settings.about.buildCommit')}
+                  </dt>
+                  <dd className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                    {serverInfo.buildCommit.slice(0, 7)}
+                  </dd>
+                </div>
+              )}
+              {serverInfo.buildDate && serverInfo.buildDate !== 'unknown' && (
+                <div>
+                  <dt className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                    {t('settings.about.buildDate')}
                   </dt>
                   <dd className="text-xs text-gray-500 dark:text-gray-400">
                     {new Date(serverInfo.buildDate).toLocaleString()}
@@ -497,12 +497,12 @@ export default function SettingsPage() {
       <Modal
         open={exportModalOpen}
         onClose={() => setExportModalOpen(false)}
-        title={t("settings.data.exportBtn")}
+        title={t('settings.data.exportBtn')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordPrompt")}
+              {t('settings.data.passwordPrompt')}
             </label>
             <input
               type="password"
@@ -513,7 +513,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordConfirm")}
+              {t('settings.data.passwordConfirm')}
             </label>
             <input
               type="password"
@@ -528,14 +528,14 @@ export default function SettingsPage() {
             onClick={() => setExportModalOpen(false)}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            {t("settings.data.cancel")}
+            {t('settings.data.cancel')}
           </button>
           <button
             onClick={handleExport}
             disabled={!exportPassword || !exportConfirmPassword}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {t("settings.data.confirmBtn")}
+            {t('settings.data.confirmBtn')}
           </button>
         </div>
       </Modal>
@@ -543,12 +543,12 @@ export default function SettingsPage() {
       <Modal
         open={importModalOpen}
         onClose={() => setImportModalOpen(false)}
-        title={t("settings.data.importBtn")}
+        title={t('settings.data.importBtn')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("settings.data.passwordPrompt")}
+              {t('settings.data.passwordPrompt')}
             </label>
             <input
               type="password"
@@ -563,14 +563,14 @@ export default function SettingsPage() {
             onClick={() => setImportModalOpen(false)}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            {t("settings.data.cancel")}
+            {t('settings.data.cancel')}
           </button>
           <button
             onClick={handleImport}
             disabled={!importPassword}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {t("settings.data.confirmBtn")}
+            {t('settings.data.confirmBtn')}
           </button>
         </div>
       </Modal>
@@ -578,10 +578,10 @@ export default function SettingsPage() {
       <Modal
         open={conflictModalOpen}
         onClose={() => setConflictModalOpen(false)}
-        title={t("settings.data.conflictTitle")}
+        title={t('settings.data.conflictTitle')}
       >
         <p className="text-sm text-gray-700 dark:text-gray-300 mb-6">
-          {t("settings.data.conflictDesc", {
+          {t('settings.data.conflictDesc', {
             conflict: conflictStats.conflict,
             new: conflictStats.new,
           })}
@@ -591,19 +591,19 @@ export default function SettingsPage() {
             onClick={() => handleResolveConflict(true)}
             className="w-full px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
           >
-            {t("settings.data.conflictOverwrite")}
+            {t('settings.data.conflictOverwrite')}
           </button>
           <button
             onClick={() => handleResolveConflict(false)}
             className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            {t("settings.data.conflictSkip")}
+            {t('settings.data.conflictSkip')}
           </button>
           <button
             onClick={() => setConflictModalOpen(false)}
             className="w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 mt-2 transition-colors"
           >
-            {t("settings.data.cancel")}
+            {t('settings.data.cancel')}
           </button>
         </div>
       </Modal>
@@ -611,12 +611,12 @@ export default function SettingsPage() {
       <Modal
         open={changePasswordModalOpen}
         onClose={() => setChangePasswordModalOpen(false)}
-        title={t("auth.changePasswordTitle")}
+        title={t('auth.changePasswordTitle')}
       >
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("auth.currentPassword")}
+              {t('auth.currentPassword')}
             </label>
             <input
               type="password"
@@ -627,7 +627,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("auth.newPassword")}
+              {t('auth.newPassword')}
             </label>
             <input
               type="password"
@@ -638,7 +638,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("auth.confirmPassword")}
+              {t('auth.confirmPassword')}
             </label>
             <input
               type="password"
@@ -653,14 +653,14 @@ export default function SettingsPage() {
             onClick={() => setChangePasswordModalOpen(false)}
             className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
           >
-            {t("settings.data.cancel")}
+            {t('settings.data.cancel')}
           </button>
           <button
             onClick={handleChangePassword}
             disabled={!currentPwd || !newPwd || !confirmNewPwd || changePwdLoading}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {t("settings.data.confirmBtn")}
+            {solving ? t('auth.solving') : t('settings.data.confirmBtn')}
           </button>
         </div>
       </Modal>

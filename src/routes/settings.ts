@@ -26,11 +26,11 @@ settings.put('/settings', async (c) => {
 
   if (body.autoCleanupDays !== undefined) {
     const v = Math.max(0, Math.floor(body.autoCleanupDays));
-    update.autoCleanupDays = v;
+    if (Number.isFinite(v)) update.autoCleanupDays = v;
   }
   if (body.autoCleanupMaxMB !== undefined) {
     const v = Math.max(0, Math.floor(body.autoCleanupMaxMB));
-    update.autoCleanupMaxMB = v;
+    if (Number.isFinite(v)) update.autoCleanupMaxMB = v;
   }
 
   await dm(c.env).setConfig(update);

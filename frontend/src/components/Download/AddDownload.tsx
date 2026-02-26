@@ -1,54 +1,44 @@
-import { useState, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import PageContainer from "../Layout/PageContainer";
-import AppIcon from "../common/AppIcon";
-import CountrySelect from "../common/CountrySelect";
-import { useAccounts } from "../../hooks/useAccounts";
-import { useDownloadAction } from "../../hooks/useDownloadAction";
-import { useSettingsStore } from "../../store/settings";
-import { useToastStore } from "../../store/toast";
-import { lookupApp } from "../../api/search";
-import { listVersions } from "../../apple/versionFinder";
-import { countryCodeMap, storeIdToCountry } from "../../apple/config";
-import { firstAccountCountry } from "../../utils/account";
-import { getErrorMessage } from "../../utils/error";
-import type { Software } from "../../types";
+import { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import PageContainer from '../Layout/PageContainer';
+import AppIcon from '../common/AppIcon';
+import CountrySelect from '../common/CountrySelect';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useDownloadAction } from '../../hooks/useDownloadAction';
+import { useSettingsStore } from '../../store/settings';
+import { useToastStore } from '../../store/toast';
+import { lookupApp } from '../../api/search';
+import { listVersions } from '../../apple/versionFinder';
+import { countryCodeMap, storeIdToCountry } from '../../apple/config';
+import { firstAccountCountry } from '../../utils/account';
+import { getErrorMessage } from '../../utils/error';
+import type { Software } from '../../types';
 
 export default function AddDownload() {
   const { accounts, updateAccount } = useAccounts();
   const { defaultCountry } = useSettingsStore();
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
-  const {
-    startDownload,
-    acquireLicense,
-    toastDownloadError,
-    toastLicenseError,
-  } = useDownloadAction();
+  const { startDownload, acquireLicense, toastDownloadError, toastLicenseError } =
+    useDownloadAction();
 
-  const [bundleId, setBundleId] = useState("");
+  const [bundleId, setBundleId] = useState('');
   const [country, setCountry] = useState(defaultCountry);
   const [countryTouched, setCountryTouched] = useState(false);
-  const [selectedAccount, setSelectedAccount] = useState("");
+  const [selectedAccount, setSelectedAccount] = useState('');
   const [app, setApp] = useState<Software | null>(null);
   const [versions, setVersions] = useState<string[]>([]);
-  const [selectedVersion, setSelectedVersion] = useState("");
-  const [step, setStep] = useState<"lookup" | "ready" | "versions">("lookup");
+  const [selectedVersion, setSelectedVersion] = useState('');
+  const [step, setStep] = useState<'lookup' | 'ready' | 'versions'>('lookup');
   const [loadingAction, setLoadingAction] = useState<
-    "lookup" | "license" | "versions" | "download" | null
+    'lookup' | 'license' | 'versions' | 'download' | null
   >(null);
 
   const isLoading = loadingAction !== null;
 
   const availableCountryCodes = Array.from(
-    new Set(
-      accounts
-        .map((a) => storeIdToCountry(a.store))
-        .filter(Boolean) as string[],
-    ),
-  ).sort((a, b) =>
-    t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)),
-  );
+    new Set(accounts.map((a) => storeIdToCountry(a.store)).filter(Boolean) as string[]),
+  ).sort((a, b) => t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)));
 
   const allCountryCodes = Object.keys(countryCodeMap).sort((a, b) =>
     t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)),
@@ -60,14 +50,11 @@ export default function AddDownload() {
 
   useEffect(() => {
     if (filteredAccounts.length > 0) {
-      if (
-        !selectedAccount ||
-        !filteredAccounts.find((a) => a.email === selectedAccount)
-      ) {
+      if (!selectedAccount || !filteredAccounts.find((a) => a.email === selectedAccount)) {
         setSelectedAccount(filteredAccounts[0].email);
       }
-    } else if (selectedAccount !== "") {
-      setSelectedAccount("");
+    } else if (selectedAccount !== '') {
+      setSelectedAccount('');
     }
   }, [filteredAccounts, selectedAccount]);
 
@@ -85,17 +72,17 @@ export default function AddDownload() {
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
     if (!bundleId.trim()) return;
-    setLoadingAction("lookup");
+    setLoadingAction('lookup');
     try {
       const result = await lookupApp(bundleId.trim(), country);
       if (!result) {
-        addToast(t("downloads.add.notFound"), "error");
+        addToast(t('downloads.add.notFound'), 'error');
         return;
       }
       setApp(result);
-      setStep("ready");
+      setStep('ready');
     } catch (e) {
-      addToast(getErrorMessage(e, t("downloads.add.lookupFailed")), "error");
+      addToast(getErrorMessage(e, t('downloads.add.lookupFailed')), 'error');
     } finally {
       setLoadingAction(null);
     }
@@ -103,7 +90,7 @@ export default function AddDownload() {
 
   async function handleGetLicense() {
     if (!account || !app) return;
-    setLoadingAction("license");
+    setLoadingAction('license');
     try {
       await acquireLicense(account, app);
     } catch (e) {
@@ -115,14 +102,14 @@ export default function AddDownload() {
 
   async function handleLoadVersions() {
     if (!account || !app) return;
-    setLoadingAction("versions");
+    setLoadingAction('versions');
     try {
       const result = await listVersions(account, app);
       setVersions(result.versions);
       await updateAccount({ ...account, cookies: result.updatedCookies });
-      setStep("versions");
+      setStep('versions');
     } catch (e) {
-      addToast(getErrorMessage(e, t("downloads.add.versionsFailed")), "error");
+      addToast(getErrorMessage(e, t('downloads.add.versionsFailed')), 'error');
     } finally {
       setLoadingAction(null);
     }
@@ -130,7 +117,7 @@ export default function AddDownload() {
 
   async function handleDownload() {
     if (!account || !app) return;
-    setLoadingAction("download");
+    setLoadingAction('download');
     try {
       await startDownload(account, app, selectedVersion || undefined);
     } catch (e) {
@@ -141,19 +128,19 @@ export default function AddDownload() {
   }
 
   return (
-    <PageContainer title={t("downloads.add.title")}>
+    <PageContainer title={t('downloads.add.title')}>
       <div className="space-y-6">
         <form onSubmit={handleLookup} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t("downloads.add.bundleId")}
+              {t('downloads.add.bundleId')}
             </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={bundleId}
                 onChange={(e) => setBundleId(e.target.value)}
-                placeholder={t("downloads.add.placeholder")}
+                placeholder={t('downloads.add.placeholder')}
                 className="block w-full flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                 disabled={isLoading}
               />
@@ -162,9 +149,9 @@ export default function AddDownload() {
                 disabled={isLoading || !bundleId.trim()}
                 className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
               >
-                {loadingAction === "lookup"
-                  ? t("downloads.add.lookingUp")
-                  : t("downloads.add.lookup")}
+                {loadingAction === 'lookup'
+                  ? t('downloads.add.lookingUp')
+                  : t('downloads.add.lookup')}
               </button>
             </div>
           </div>
@@ -193,9 +180,7 @@ export default function AddDownload() {
                   </option>
                 ))
               ) : (
-                <option value="">
-                  {t("downloads.add.noAccountsForRegion")}
-                </option>
+                <option value="">{t('downloads.add.noAccountsForRegion')}</option>
               )}
             </select>
           </div>
@@ -219,10 +204,10 @@ export default function AddDownload() {
               </svg>
             </div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
-              {t("downloads.add.emptyTitle")}
+              {t('downloads.add.emptyTitle')}
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
-              {t("downloads.add.emptyDesc")}
+              {t('downloads.add.emptyDesc')}
             </p>
           </div>
         )}
@@ -232,30 +217,25 @@ export default function AddDownload() {
             <div className="flex items-center gap-4 mb-4">
               <AppIcon url={app.artworkUrl} name={app.name} size="md" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">
-                  {app.name}
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {app.artistName}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white">{app.name}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{app.artistName}</p>
                 <p className="text-sm text-gray-400 dark:text-gray-500">
-                  v{app.version} -{" "}
-                  {app.formattedPrice ?? t("search.product.free")}
+                  v{app.version} - {app.formattedPrice ?? t('search.product.free')}
                 </p>
               </div>
             </div>
 
-            {step === "versions" && versions.length > 0 && (
+            {step === 'versions' && versions.length > 0 && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t("downloads.add.versionOptional")}
+                  {t('downloads.add.versionOptional')}
                 </label>
                 <select
                   value={selectedVersion}
                   onChange={(e) => setSelectedVersion(e.target.value)}
                   className="w-full rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 truncate disabled:bg-gray-50 dark:disabled:bg-gray-800/50 disabled:text-gray-500 dark:disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
-                  <option value="">{t("downloads.add.latest")}</option>
+                  <option value="">{t('downloads.add.latest')}</option>
                   {versions.map((v) => (
                     <option key={v} value={v}>
                       {v}
@@ -272,20 +252,20 @@ export default function AddDownload() {
                   disabled={isLoading || !account}
                   className="px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loadingAction === "license"
-                    ? t("downloads.add.processing")
-                    : t("downloads.add.getLicense")}
+                  {loadingAction === 'license'
+                    ? t('downloads.add.processing')
+                    : t('downloads.add.getLicense')}
                 </button>
               )}
-              {step !== "versions" && (
+              {step !== 'versions' && (
                 <button
                   onClick={handleLoadVersions}
                   disabled={isLoading || !account}
                   className="px-3 py-1.5 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {loadingAction === "versions"
-                    ? t("downloads.add.processing")
-                    : t("downloads.add.selectVersion")}
+                  {loadingAction === 'versions'
+                    ? t('downloads.add.processing')
+                    : t('downloads.add.selectVersion')}
                 </button>
               )}
               <button
@@ -293,9 +273,9 @@ export default function AddDownload() {
                 disabled={isLoading || !account}
                 className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                {loadingAction === "download"
-                  ? t("downloads.add.processing")
-                  : t("downloads.add.download")}
+                {loadingAction === 'download'
+                  ? t('downloads.add.processing')
+                  : t('downloads.add.download')}
               </button>
             </div>
           </div>

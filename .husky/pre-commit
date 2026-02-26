@@ -1,0 +1,5 @@
+BRANCH=$(git branch --show-current)
+if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "dev" ]; then
+  pnpm typecheck
+fi
+pnpm exec lint-staged

@@ -1,11 +1,12 @@
-import { parsePlist } from "./plist";
+import type { PlistDict } from './plist';
+import { parsePlist } from './plist';
 
 export interface BagOutput {
   authURL: string;
 }
 
 export const defaultAuthURL =
-  "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate";
+  'https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate';
 
 // Fetches the bag via the backend proxy.
 // The backend fetches it using Node.js native HTTPS.
@@ -22,11 +23,11 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
     }
 
     const xml = await resp.text();
-    const dict = parsePlist(xml) as Record<string, any>;
+    const dict = parsePlist(xml) as PlistDict;
 
     // authenticateAccount may be at top level or inside a urlBag dict
     let authURL: string | undefined;
-    const urlBag = dict.urlBag as Record<string, any> | undefined;
+    const urlBag = dict.urlBag as PlistDict | undefined;
     if (urlBag) {
       authURL = urlBag.authenticateAccount as string | undefined;
     }
@@ -35,9 +36,7 @@ export async function fetchBag(deviceId: string): Promise<BagOutput> {
     }
 
     if (!authURL) {
-      console.warn(
-        "[Bag] authenticateAccount URL not found in bag, using default auth endpoint",
-      );
+      console.warn('[Bag] authenticateAccount URL not found in bag, using default auth endpoint');
       return { authURL: defaultAuthURL };
     }
 

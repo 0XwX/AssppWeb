@@ -5,7 +5,9 @@ import bplistCreator from 'bplist-creator';
 import plist from 'plist';
 import {
   MAX_DOWNLOAD_SIZE,
-  MIN_MULTIPART_PART_SIZE,
+  UPLOAD_PART_SIZE,
+  CDN_FETCH_TIMEOUT_MS,
+  CDN_FETCH_MAX_RETRIES,
   MIN_ACCOUNT_HASH_LENGTH,
 } from '../config.js';
 import {
@@ -31,7 +33,7 @@ export interface CreateTaskParams {
 export type SanitizedTask = Omit<
   DownloadTask,
   'downloadURL' | 'sinfs' | 'iTunesMetadata' | 'filePath'
-> & { hasFile: boolean };
+> & { hasFile: boolean; fileSize?: number };
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -53,10 +55,9 @@ function validateDownloadURL(url: string): void {
     throw new Error('Download URL must not use IP addresses');
 }
 
-function sanitize(task: DownloadTask, hasFile: boolean): SanitizedTask {
-  const { downloadURL: _d, sinfs: _s, iTunesMetadata: _m, filePath: _f, ...safe } =
-    task;
-  return { ...safe, hasFile };
+function sanitize(task: DownloadTask, hasFile: boolean, fileSize?: number): SanitizedTask {
+  const { downloadURL: _d, sinfs: _s, iTunesMetadata: _m, filePath: _f, ...safe } = task;
+  return { ...safe, hasFile, fileSize };
 }
 
 function formatSpeed(bps: number): string {
@@ -65,12 +66,106 @@ function formatSpeed(bps: number): string {
   return `${(bps / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
-function concat(...arrays: Uint8Array<ArrayBufferLike>[]): Uint8Array<ArrayBuffer> {
-  const total = arrays.reduce((n, a) => n + a.length, 0);
-  const out = new Uint8Array(total);
+/** Take exactly `size` bytes from chunks, return merged + remaining */
+function mergeChunks(
+  chunks: Uint8Array[],
+  size: number,
+): { merged: Uint8Array; remaining: Uint8Array[] } {
+  const merged = new Uint8Array(size);
   let pos = 0;
-  for (const a of arrays) { out.set(a, pos); pos += a.length; }
+  const remaining: Uint8Array[] = [];
+  let filled = false;
+
+  for (const chunk of chunks) {
+    if (filled) {
+      remaining.push(chunk);
+      continue;
+    }
+    const need = size - pos;
+    if (chunk.length <= need) {
+      merged.set(chunk, pos);
+      pos += chunk.length;
+      if (pos === size) filled = true;
+    } else {
+      merged.set(chunk.subarray(0, need), pos);
+      remaining.push(chunk.subarray(need));
+      filled = true;
+    }
+  }
+  return { merged, remaining };
+}
+
+function mergeAll(chunks: Uint8Array[], totalSize: number): Uint8Array {
+  const out = new Uint8Array(totalSize);
+  let pos = 0;
+  for (const c of chunks) {
+    out.set(c, pos);
+    pos += c.length;
+  }
   return out;
+}
+
+class HttpError extends Error {
+  constructor(
+    public readonly status: number,
+    statusText: string,
+  ) {
+    super(`HTTP ${status}: ${statusText}`);
+  }
+}
+
+async function fetchWithRetry(
+  url: string,
+  signal: AbortSignal,
+  maxRetries: number = CDN_FETCH_MAX_RETRIES,
+): Promise<Response> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+    const timeoutController = new AbortController();
+    const timeout = setTimeout(() => timeoutController.abort(), CDN_FETCH_TIMEOUT_MS);
+    const combined = AbortSignal.any([signal, timeoutController.signal]);
+
+    try {
+      const response = await fetch(url, {
+        signal: combined,
+        redirect: 'follow',
+      });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        throw new HttpError(response.status, response.statusText);
+      }
+
+      return response;
+    } catch (err) {
+      clearTimeout(timeout);
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
+
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      // 4xx: client error, no retry
+      if (lastError instanceof HttpError && lastError.status < 500) throw lastError;
+      if (attempt === maxRetries) break;
+
+      const delay = 1000 * Math.pow(2, attempt);
+      await new Promise<void>((resolve, reject) => {
+        const onAbort = () => {
+          clearTimeout(timer);
+          reject(new DOMException('Aborted', 'AbortError'));
+        };
+        const timer = setTimeout(() => {
+          signal.removeEventListener('abort', onAbort);
+          resolve();
+        }, delay);
+        signal.addEventListener('abort', onAbort, { once: true });
+      });
+    }
+  }
+
+  throw lastError ?? new Error('Download failed');
 }
 
 // ---------------------------------------------------------------------------
@@ -131,21 +226,20 @@ export class DownloadManager extends DurableObject {
     const task = await this.loadTask(id);
     if (!task || task.accountHash !== accountHash) return null;
     const r2key = await this.ctx.storage.get<string>(`r2key:${id}`);
-    const hasFile = !!r2key && !!(await this.env.IPA_BUCKET.head(r2key));
-    return sanitize(task, hasFile);
+    const head = r2key ? await this.env.IPA_BUCKET.head(r2key) : null;
+    return sanitize(task, !!head, head?.size);
   }
 
   async listTasks(accountHashes: string[]): Promise<SanitizedTask[]> {
     const result: SanitizedTask[] = [];
     for (const hash of accountHashes) {
-      const ids =
-        (await this.ctx.storage.get<string[]>(`accounts:${hash}`)) ?? [];
+      const ids = (await this.ctx.storage.get<string[]>(`accounts:${hash}`)) ?? [];
       for (const id of ids) {
         const task = await this.loadTask(id);
         if (!task) continue;
         const r2key = await this.ctx.storage.get<string>(`r2key:${id}`);
-        const hasFile = !!r2key && !!(await this.env.IPA_BUCKET.head(r2key));
-        result.push(sanitize(task, hasFile));
+        const head = r2key ? await this.env.IPA_BUCKET.head(r2key) : null;
+        result.push(sanitize(task, !!head, head?.size));
       }
     }
     return result;
@@ -162,9 +256,7 @@ export class DownloadManager extends DurableObject {
     // Delete R2 file
     const r2key = await this.ctx.storage.get<string>(`r2key:${id}`);
     if (r2key) {
-      await this.env.IPA_BUCKET.delete(r2key).catch((e) =>
-        console.error('R2 delete failed:', e),
-      );
+      await this.env.IPA_BUCKET.delete(r2key).catch((e) => console.error('R2 delete failed:', e));
     }
 
     // Remove from storage
@@ -204,9 +296,7 @@ export class DownloadManager extends DurableObject {
   }
 
   /** Public lookup by task ID only — no accountHash. UUID is the secret. */
-  async getTaskPublic(
-    id: string,
-  ): Promise<{ software: Software; hasFile: boolean } | null> {
+  async getTaskPublic(id: string): Promise<{ software: Software; hasFile: boolean } | null> {
     const task = await this.loadTask(id);
     if (!task || task.status !== 'completed') return null;
     const r2key = await this.ctx.storage.get<string>(`r2key:${id}`);
@@ -232,8 +322,7 @@ export class DownloadManager extends DurableObject {
   > {
     const result = [];
     for (const hash of accountHashes) {
-      const ids =
-        (await this.ctx.storage.get<string[]>(`accounts:${hash}`)) ?? [];
+      const ids = (await this.ctx.storage.get<string[]>(`accounts:${hash}`)) ?? [];
       for (const id of ids) {
         const task = await this.loadTask(id);
         if (!task || task.status !== 'completed') continue;
@@ -352,9 +441,7 @@ export class DownloadManager extends DurableObject {
       if (totalSize > maxBytes) {
         // Sort remaining tasks by createdAt ascending (oldest first)
         allTasks.sort(
-          (a, b) =>
-            new Date(a.task.createdAt).getTime() -
-            new Date(b.task.createdAt).getTime(),
+          (a, b) => new Date(a.task.createdAt).getTime() - new Date(b.task.createdAt).getTime(),
         );
 
         for (const entry of allTasks) {
@@ -375,11 +462,7 @@ export class DownloadManager extends DurableObject {
   }
 
   /** Delete a task completely: R2 object + DO storage + account index */
-  private async purgeTask(
-    id: string,
-    accountHash: string,
-    r2key: string | null,
-  ): Promise<void> {
+  private async purgeTask(id: string, accountHash: string, r2key: string | null): Promise<void> {
     this.abortControllers.get(id)?.abort();
     this.abortControllers.delete(id);
     if (r2key) {
@@ -411,19 +494,10 @@ export class DownloadManager extends DurableObject {
     try {
       validateDownloadURL(task.downloadURL);
 
-      const response = await fetch(task.downloadURL, {
-        signal: controller.signal,
-        redirect: 'follow',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
+      const response = await fetchWithRetry(task.downloadURL, controller.signal);
       if (!response.body) throw new Error('No response body');
 
-      const contentLength = parseInt(
-        response.headers.get('content-length') ?? '0',
-      );
+      const contentLength = parseInt(response.headers.get('content-length') ?? '0');
       if (contentLength > MAX_DOWNLOAD_SIZE) {
         throw new Error('File too large');
       }
@@ -471,30 +545,45 @@ export class DownloadManager extends DurableObject {
     const upload = await this.env.IPA_BUCKET.createMultipartUpload(r2key);
     const parts: R2UploadedPart[] = [];
     let partNum = 1;
-    let partBuf = new Uint8Array(0);
     let downloaded = 0;
     let lastTime = Date.now();
     let lastBytes = 0;
 
-    const reader = body.getReader();
+    // Collect chunks instead of concat on every read
+    let chunks: Uint8Array[] = [];
+    let bufferSize = 0;
 
-    // Upload exactly MIN_MULTIPART_PART_SIZE bytes per part (except the last).
-    // R2 requires all non-trailing parts to be the same size.
-    const flushFull = async () => {
-      while (partBuf.length >= MIN_MULTIPART_PART_SIZE) {
-        const slice = partBuf.slice(0, MIN_MULTIPART_PART_SIZE);
-        const part = await upload.uploadPart(partNum++, slice);
-        parts.push(part);
-        partBuf = partBuf.slice(MIN_MULTIPART_PART_SIZE);
+    // Double-buffering: previous part upload promise
+    let pendingUpload: Promise<void> | null = null;
+
+    const flushBuffer = async () => {
+      if (pendingUpload) await pendingUpload;
+      pendingUpload = null;
+
+      // Synchronously upload all-but-last full parts
+      while (bufferSize >= UPLOAD_PART_SIZE * 2) {
+        const part = mergeChunks(chunks, UPLOAD_PART_SIZE);
+        chunks = part.remaining;
+        bufferSize -= UPLOAD_PART_SIZE;
+        const uploaded = await upload.uploadPart(partNum++, part.merged);
+        parts.push(uploaded);
+      }
+
+      // Fire last full part as double-buffer (read continues while it uploads)
+      if (bufferSize >= UPLOAD_PART_SIZE) {
+        const part = mergeChunks(chunks, UPLOAD_PART_SIZE);
+        chunks = part.remaining;
+        bufferSize -= UPLOAD_PART_SIZE;
+        const num = partNum++;
+        const data = part.merged;
+        pendingUpload = (async () => {
+          const uploaded = await upload.uploadPart(num, data);
+          parts.push(uploaded);
+        })();
       }
     };
 
-    const flushFinal = async () => {
-      if (partBuf.length === 0) return;
-      const part = await upload.uploadPart(partNum++, partBuf);
-      parts.push(part);
-      partBuf = new Uint8Array(0);
-    };
+    const reader = body.getReader();
 
     try {
       while (true) {
@@ -506,31 +595,52 @@ export class DownloadManager extends DurableObject {
         downloaded += value.length;
         if (downloaded > MAX_DOWNLOAD_SIZE) throw new Error('File too large');
 
-        partBuf = concat(partBuf, value);
+        chunks.push(value);
+        bufferSize += value.length;
 
-        if (partBuf.length >= MIN_MULTIPART_PART_SIZE) {
-          await flushFull();
+        if (bufferSize >= UPLOAD_PART_SIZE) {
+          await flushBuffer();
         }
 
-        // Progress + speed every 500ms
         const now = Date.now();
         if (now - lastTime >= 2000) {
+          // 2s interval to reduce DO storage write overhead
           const bps = ((downloaded - lastBytes) / (now - lastTime)) * 1000;
           task.speed = formatSpeed(bps);
-          task.progress =
-            contentLength > 0
-              ? Math.round((downloaded / contentLength) * 100)
-              : 0;
+          task.progress = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : 0;
           lastTime = now;
           lastBytes = downloaded;
           await this.saveTask(task);
         }
       }
 
-      await flushFull(); // upload any remaining full parts
-      await flushFinal(); // upload final partial part
+      // Wait for pending upload (may still be in-flight after last flushBuffer)
+      // TS control-flow narrows pendingUpload incorrectly; async callback sets it
+      const pending = pendingUpload as Promise<void> | null;
+      if (pending) await pending;
+
+      // Upload remaining full parts
+      while (bufferSize >= UPLOAD_PART_SIZE) {
+        const part = mergeChunks(chunks, UPLOAD_PART_SIZE);
+        chunks = part.remaining;
+        bufferSize -= UPLOAD_PART_SIZE;
+        const uploaded = await upload.uploadPart(partNum++, part.merged);
+        parts.push(uploaded);
+      }
+
+      // Upload final partial part
+      if (bufferSize > 0) {
+        const final = mergeAll(chunks, bufferSize);
+        const uploaded = await upload.uploadPart(partNum++, final);
+        parts.push(uploaded);
+      }
+
+      parts.sort((a, b) => a.partNumber - b.partNumber);
       await upload.complete(parts);
     } catch (err) {
+      // pendingUpload may still be in-flight if error occurred during read
+      const pending = pendingUpload as Promise<void> | null;
+      if (pending) await pending.catch(() => {});
       await upload.abort().catch((e) => console.error('Multipart upload abort failed:', e));
       throw err;
     } finally {
@@ -572,17 +682,32 @@ export class DownloadManager extends DurableObject {
       const parts: R2UploadedPart[] = [];
       let partNum = 1;
 
-      // Upload original data in chunks (read from R2 in slices)
+      // Upload original data in chunks, merging tail into the last chunk
+      // (R2 requires all non-trailing parts to have the same size)
+      let tailAppended = false;
       for (let offset = 0; offset < cdOffset; offset += COPY_CHUNK) {
         const length = Math.min(COPY_CHUNK, cdOffset - offset);
         const chunk = await readRange(offset, offset + length);
-        const part = await upload.uploadPart(partNum++, chunk);
-        parts.push(part);
+        const isLastChunk = offset + length >= cdOffset;
+
+        if (isLastChunk) {
+          const combined = new Uint8Array(chunk.length + tail.length);
+          combined.set(chunk, 0);
+          combined.set(tail, chunk.length);
+          const part = await upload.uploadPart(partNum++, combined);
+          parts.push(part);
+          tailAppended = true;
+        } else {
+          const part = await upload.uploadPart(partNum++, chunk);
+          parts.push(part);
+        }
       }
 
-      // Upload tail (few KB)
-      const tailPart = await upload.uploadPart(partNum, tail);
-      parts.push(tailPart);
+      // cdOffset === 0: no original data, upload tail only
+      if (!tailAppended) {
+        const part = await upload.uploadPart(partNum++, tail);
+        parts.push(part);
+      }
 
       await upload.complete(parts);
     } catch (err) {
@@ -595,7 +720,9 @@ export class DownloadManager extends DurableObject {
     const newObj = await this.env.IPA_BUCKET.get(newKey);
     if (!newObj) throw new Error('R2 rename step failed: new object missing');
     await this.env.IPA_BUCKET.put(r2key, newObj.body);
-    await this.env.IPA_BUCKET.delete(newKey);
+    await this.env.IPA_BUCKET.delete(newKey).catch((e) =>
+      console.error('R2 temp key cleanup failed:', e),
+    );
   }
 
   private async buildFilesToAppend(
@@ -648,9 +775,7 @@ export class DownloadManager extends DurableObject {
     } else {
       // Fallback: read Info.plist for CFBundleExecutable
       const infoEntry = entries.find(
-        (e) =>
-          e.name === `Payload/${bundleName}.app/Info.plist` &&
-          !e.name.includes('/Watch/'),
+        (e) => e.name === `Payload/${bundleName}.app/Info.plist` && !e.name.includes('/Watch/'),
       );
       if (!infoEntry) throw new Error('Could not read manifest or info plist');
 
@@ -672,9 +797,7 @@ export class DownloadManager extends DurableObject {
       let metaBuffer: Buffer;
       try {
         const parsed = plist.parse(xmlBuffer.toString('utf-8'));
-        metaBuffer = Buffer.from(
-          bplistCreator(parsed as Record<string, unknown>),
-        );
+        metaBuffer = Buffer.from(bplistCreator(parsed as Record<string, unknown>));
       } catch {
         metaBuffer = xmlBuffer;
       }
@@ -748,26 +871,15 @@ export class DownloadManager extends DurableObject {
     }
   }
 
-  private async addToAccountIndex(
-    accountHash: string,
-    taskId: string,
-  ): Promise<void> {
-    const existing =
-      (await this.ctx.storage.get<string[]>(`accounts:${accountHash}`)) ?? [];
+  private async addToAccountIndex(accountHash: string, taskId: string): Promise<void> {
+    const existing = (await this.ctx.storage.get<string[]>(`accounts:${accountHash}`)) ?? [];
     if (!existing.includes(taskId)) {
-      await this.ctx.storage.put(`accounts:${accountHash}`, [
-        ...existing,
-        taskId,
-      ]);
+      await this.ctx.storage.put(`accounts:${accountHash}`, [...existing, taskId]);
     }
   }
 
-  private async removeFromAccountIndex(
-    accountHash: string,
-    taskId: string,
-  ): Promise<void> {
-    const existing =
-      (await this.ctx.storage.get<string[]>(`accounts:${accountHash}`)) ?? [];
+  private async removeFromAccountIndex(accountHash: string, taskId: string): Promise<void> {
+    const existing = (await this.ctx.storage.get<string[]>(`accounts:${accountHash}`)) ?? [];
     await this.ctx.storage.put(
       `accounts:${accountHash}`,
       existing.filter((id) => id !== taskId),

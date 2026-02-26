@@ -16,7 +16,8 @@
     "currentPassword": "目前密碼",
     "newPassword": "新密碼",
     "passwordChanged": "密碼變更成功。",
-    "changeFailed": "變更密碼失敗。"
+    "changeFailed": "變更密碼失敗。",
+    "solving": "驗證中..."
   },
   "theme": {
     "light": "日間模式",
@@ -149,7 +150,7 @@
   "downloads": {
     "title": "下載",
     "new": "新增下載",
-    "warning": "安裝包是暫時的，將在伺服器重啟時被清除。請及時下載或安裝。",
+    "storageUsage": "雲端儲存佔用: {{size}}",
     "loading": "載入下載中...",
     "emptyAll": "暫無下載。",
     "emptyAllDesc": "您的下載佇列為空。前往搜尋頁面探索並下載您需要的應用程式吧。",

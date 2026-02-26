@@ -9,11 +9,16 @@
 
 ## Project Structure
 
-- `backend/` — Node.js/Express server (TypeScript, ESM)
+- `src/` — Cloudflare Workers backend (Hono, TypeScript, ESM)
+  - `src/do/` — Durable Objects (WispProxy, DownloadManager)
+  - `src/middleware/` — Auth middleware (PoW, session, password)
+  - `src/routes/` — Hono API routes
+  - `src/config.ts` — Centralized constants
+  - `src/types.ts` — Shared types (Software, DownloadTask, etc.)
+  - `src/env.d.ts` — Env interface (Workers bindings)
 - `frontend/` — React SPA (TypeScript, Vite, Tailwind CSS)
-- `e2e/` — Playwright E2E tests (pnpm)
 - `references/ApplePackage/` — Swift reference implementation (source of truth)
-- Multi-stage Docker build (single container serves both)
+- Root `package.json` — unified dependencies for both frontend and workers
 
 ## Architecture — Zero-Trust
 
@@ -35,12 +40,15 @@ The server is a blind TCP proxy. It NEVER sees Apple credentials.
 │  TLS 1.3 encrypted via Wisp protocol over WebSocket  │
 └──────────────────────┬───────────────────────────────┘
                        │ Wisp-multiplexed TCP (server cannot read)
-┌─ Server (Wisp Proxy) ┴──────────────────────────────┐
-│  Wisp server (@mercuryworkshop/wisp-js) on /wisp/    │
+┌─ Server (Workers) ───┴──────────────────────────────┐
+│  Hono app on Cloudflare Workers                      │
+│                                                      │
+│  Wisp proxy: Durable Object (WispProxy) on /wisp/   │
+│  → Each WebSocket session gets its own DO instance   │
 │  → multiplexed TCP relay (blind tunnel, no decrypt)  │
 │                                                      │
 │  Bag proxy: GET /api/bag?guid=<id>                   │
-│    - Fetches init.itunes.apple.com/bag.xml via HTTPS │
+│    - Fetches init.itunes.apple.com/bag.xml via fetch │
 │    - Returns public Apple service URLs (no creds)    │
 │                                                      │
 │  After client obtains download info:                 │
@@ -49,13 +57,77 @@ The server is a blind TCP proxy. It NEVER sees Apple credentials.
 │    - sinfs = DRM signatures (base64)                 │
 │    - iTunesMetadata = app metadata plist (base64)    │
 │                                                      │
-│  Server downloads IPA from CDN, injects SINFs +      │
-│  iTunesMetadata, stores compiled IPA, serves via     │
+│  DownloadManager DO downloads IPA from CDN, injects  │
+│  SINFs + iTunesMetadata, stores to R2, serves via    │
 │  public install URL (itms-services manifest)         │
+│                                                      │
+│  Auth: PoW challenge + PBKDF2 password + HMAC token  │
+│  Storage: KV (password hash), R2 (IPA files)         │
 └──────────────────────────────────────────────────────┘
 ```
 
 **Key invariant**: The server NEVER sees Apple credentials. All Apple TLS terminates at the browser via libcurl.js WASM (Mbed TLS 1.3). The server only receives public CDN URLs and non-secret metadata for IPA compilation. The bag proxy (`/api/bag`) only returns public Apple service URLs — no credentials pass through it.
+
+## Cloudflare Workers Bindings
+
+Defined in `wrangler.jsonc`, typed in `src/env.d.ts`:
+
+| Binding            | Type                   | Purpose                                 |
+| ------------------ | ---------------------- | --------------------------------------- |
+| `WISP_PROXY`       | DurableObjectNamespace | Wisp WebSocket proxy (per-session)      |
+| `DOWNLOAD_MANAGER` | DurableObjectNamespace | Download tasks + IPA compilation        |
+| `AUTH_KV`          | KVNamespace            | Password hash storage                   |
+| `IPA_BUCKET`       | R2Bucket               | Compiled IPA file storage               |
+| `ASSETS`           | Fetcher                | Frontend static assets (Workers Assets) |
+
+Environment variables (set in `wrangler.jsonc` `vars` or via `wrangler secret`):
+
+| Variable              | Default | Description                                |
+| --------------------- | ------- | ------------------------------------------ |
+| `AUTO_CLEANUP_DAYS`   | `2`     | Delete cached IPAs older than N days       |
+| `AUTO_CLEANUP_MAX_MB` | `8192`  | Delete oldest IPAs when total exceeds N MB |
+| `POW_DIFFICULTY`      | `20`    | PoW challenge difficulty (16-24 bits)      |
+| `BUILD_COMMIT`        | —       | Git commit hash (set at deploy time)       |
+| `BUILD_DATE`          | —       | Build timestamp (set at deploy time)       |
+
+## Backend (Workers)
+
+Entry point: `src/index.ts` — Hono app with:
+
+- HTTPS redirect middleware (via `x-forwarded-proto`)
+- Auth middleware on `/api/*` (except `/api/auth/*` and `/api/install/*`) and `/wisp/*`
+- Wisp WebSocket proxy → `WispProxy` DO (each session gets a unique DO instance)
+- API routes mounted under `/api`
+- SPA fallback: Workers Assets binding with `index.html` fallback for 404s
+- Scheduled handler: R2 cleanup cron (`0 2 * * *`)
+
+### API Routes (`src/routes/`)
+
+| File           | Endpoints                                                                                | Description                      |
+| -------------- | ---------------------------------------------------------------------------------------- | -------------------------------- |
+| `auth.ts`      | `/auth/challenge`, `/auth/login`, `/auth/setup`, `/auth/logout`, `/auth/change-password` | PoW + password auth              |
+| `bag.ts`       | `/bag?guid=<id>`                                                                         | Apple bag proxy                  |
+| `search.ts`    | `/search?term=...&country=...`                                                           | iTunes search proxy              |
+| `downloads.ts` | `/downloads` CRUD                                                                        | Download task management         |
+| `packages.ts`  | `/packages`                                                                              | Compiled IPA listing             |
+| `install.ts`   | `/install/:id/manifest.plist`, `/install/:id/download`                                   | iOS itms-services install        |
+| `settings.ts`  | `/settings`                                                                              | Server config + cleanup settings |
+
+### Durable Objects (`src/do/`)
+
+- **WispProxy** (`src/do/WispProxy.ts`) — Wisp protocol server; validates target hosts against Apple whitelist (`auth/buy/init.itunes.apple.com`, pod-based `p{N}-buy.itunes.apple.com`); port 443 only; blocks direct IPs
+- **DownloadManager** (`src/do/DownloadManager.ts`) — Singleton (`idFromName('singleton')`); manages download tasks, IPA compilation (SINF + iTunesMetadata injection), R2 storage, auto-cleanup; password hash migration path (DO → KV)
+
+### Auth System (`src/middleware/auth.ts`)
+
+- **Password**: PBKDF2 (100,000 iterations, SHA-256) with random salt; stored in KV (`AUTH_KV`) with DO fallback migration
+- **Session**: HMAC-SHA256 token (7-day expiry) in `asspp_session` cookie
+- **PoW**: Signed challenge-response; ephemeral HMAC key (non-extractable, regenerated on Worker restart); in-memory replay prevention (`Map<string, number>`, capped at 10,000 entries)
+- **Timing-safe comparison**: HMAC-based for password and token verification
+
+### Config (`src/config.ts`)
+
+Centralized constants: `MAX_DOWNLOAD_SIZE` (8 GB), `BAG_TIMEOUT_MS` (15s), `BAG_MAX_BYTES` (1 MB), `MIN_ACCOUNT_HASH_LENGTH` (8), `UPLOAD_PART_SIZE` (25 MB), `CDN_FETCH_TIMEOUT_MS` (30s), `CDN_FETCH_MAX_RETRIES` (3), `MAX_SEARCH_BYTES` (5 MB), `BAG_USER_AGENT`.
 
 ## Reference Implementation
 
@@ -67,7 +139,7 @@ The Swift reference at `references/ApplePackage/` is the source of truth for App
 
 ### iTunes API Field Mapping
 
-The backend (`backend/src/routes/search.ts`) maps raw iTunes API fields to our `Software` type, matching the Swift CodingKeys in `references/ApplePackage/Sources/ApplePackage/Models/Software.swift`:
+The backend (`src/routes/search.ts`) maps raw iTunes API fields to our `Software` type, matching the Swift CodingKeys in `references/ApplePackage/Sources/ApplePackage/Models/Software.swift`:
 
 | iTunes Field                | Software Field |
 | --------------------------- | -------------- |
@@ -99,35 +171,20 @@ After authentication, Apple returns a `pod` header:
 - Pod is stored on the Account object and used for all subsequent API calls
 - Functions: `storeAPIHost(pod?)` and `purchaseAPIHost(pod?)` in `frontend/src/apple/config.ts`
 
-## Dynamic Host Validation (Backend)
+## Dynamic Host Validation
 
-The Wisp server validates target hosts via `hostname_whitelist` in `backend/src/services/wsProxy.ts`:
+The WispProxy DO (`src/do/WispProxy.ts`) validates target hosts:
 
 - `auth.itunes.apple.com` — bag-resolved auth endpoint
 - `buy.itunes.apple.com` — purchase endpoint
 - `init.itunes.apple.com` — bag endpoint
 - `/^p\d+-buy\.itunes\.apple\.com$/` — pod-based hosts
 - Port restricted to `443` only
-- Direct IP targets blocked (`allow_direct_ip = false`)
-- Loopback IP targets blocked (`allow_loopback_ips = false`)
-- Private/reserved resolved IPs allowed (`allow_private_ips = true`) for Docker/OrbStack DNS translation while hostname allowlist remains the primary control
+- Direct IP targets blocked
 
-## Bag Proxy (Backend)
+## Bag Proxy
 
-The backend proxies the bag endpoint via `GET /api/bag?guid=<deviceId>` using Node.js native HTTPS. It sends Configurator-compatible request headers (`User-Agent`, `Accept: application/xml`). The bag response is public data (Apple service URLs) — no credentials are involved. See `backend/src/routes/bag.ts`.
-
-## Backend
-
-- Express + `@mercuryworkshop/wisp-js` for HTTP and Wisp proxy
-- ESM modules (`"type": "module"` in package.json)
-- `tsx` for development, `tsc` for production build
-- SINF injector also handles optional `iTunesMetadata.plist` injection at IPA root
-- Bag proxy for `init.itunes.apple.com`
-
-### Backend Shared Utilities
-
-- `backend/src/utils/route.ts` — shared Express route helpers (`getIdParam`, `requireAccountHash`, `verifyTaskOwnership`)
-- `backend/src/config.ts` — centralized constants (`MAX_DOWNLOAD_SIZE`, `DOWNLOAD_TIMEOUT_MS`, `BAG_TIMEOUT_MS`, `BAG_MAX_BYTES`, `MIN_ACCOUNT_HASH_LENGTH`) and env-var config (`disableHttpsRedirect` via `UNSAFE_DANGEROUSLY_DISABLE_HTTPS_REDIRECT`)
+The backend proxies the bag endpoint via `GET /api/bag?guid=<deviceId>` using Workers `fetch`. It sends Configurator-compatible request headers (`User-Agent`, `Accept: application/xml`). The bag response is public data (Apple service URLs) — no credentials are involved. See `src/routes/bag.ts`.
 
 ## Frontend
 
@@ -141,6 +198,7 @@ The backend proxies the bag endpoint via `GET /api/bag?guid=<deviceId>` using No
 - Authentication (`frontend/src/apple/authenticate.ts`) resolves bag endpoint, then sets `guid` via URL query manipulation to avoid duplicate/malformed query parameters
 - Plist build/parse (`frontend/src/apple/plist.ts`) uses native XML builder and browser-native `DOMParser`
 - Cookie helper (`frontend/src/apple/cookies.ts`) — `extractAndMergeCookies(rawHeaders, existingCookies)` replaces the repeated extract-and-merge pattern across all Apple protocol files
+- PoW solver (`frontend/src/utils/pow.ts`) — client-side SHA-256 brute-force for login/setup challenge
 
 ### Frontend Shared Components (`components/common/`)
 
@@ -158,6 +216,7 @@ The backend proxies the bag endpoint via `GET /api/bag?guid=<deviceId>` using No
 - `utils/error.ts` — `getErrorMessage(e, fallback)` for standardized catch-block error extraction
 - `utils/crypto.ts` — AES-GCM encrypt/decrypt for account export/import
 - `utils/account.ts` — `accountHash()`, `accountStoreCountry()`, `firstAccountCountry()`
+- `utils/pow.ts` — PoW challenge solver (`solveChallenge`, `fetchAndSolveChallenge`)
 
 ### Import Ordering Convention
 
@@ -179,14 +238,18 @@ The backend proxies the bag endpoint via `GET /api/bag?guid=<deviceId>` using No
 
 ## Security Model
 
+### Password Authentication
+
+The instance is protected by a server-side password (set on first visit). Login requires solving a PoW challenge before submitting credentials. The PoW uses an ephemeral HMAC key that regenerates on Worker restart — no secrets to configure.
+
 ### Account Hash Is Public
 
-`accountHash` is a SHA-256 of the account email. It is treated as **public, non-secret data** — it identifies which account owns a download but does not grant any privileged access. No authentication is bound to it. This is by design: the server is a blind proxy and does not manage user sessions.
+`accountHash` is a SHA-256 of the account email. It is treated as **public, non-secret data** — it identifies which account owns a download but does not grant any privileged access.
 
 ### Trusted Sources
 
 - **Apple API responses** (bag XML, iTunes search results, `customerMessage` fields) are treated as trusted content. No additional sanitization is applied beyond what React's text rendering provides (no `dangerouslySetInnerHTML`).
-- **Apple CDN redirects** during IPA download are trusted. The initial URL is validated against `*.apple.com`, and redirect targets from Apple's CDN infrastructure (e.g., Akamai) are followed. The response body is saved to disk — it is never reflected back to the requester.
+- **Apple CDN redirects** during IPA download are trusted. The initial URL is validated against `*.apple.com`, and redirect targets from Apple's CDN infrastructure (e.g., Akamai) are followed. The response body is stored to R2 — it is never reflected back to the requester.
 
 ### Browser as Security Boundary
 
@@ -194,13 +257,13 @@ Credentials (passwords, `passwordToken`, cookies) stored in IndexedDB are protec
 
 ### Backend Does Not Reflect Request Headers
 
-The settings endpoint (`/api/settings`) must never reflect request headers (`x-forwarded-host`, `host`, etc.) in its response body. Use server-side values only (`config.*`, `process.uptime()`).
+The settings endpoint (`/api/settings`) must never reflect request headers (`x-forwarded-host`, `host`, etc.) in its response body. Use server-side values only.
 
 ## Error Handling
 
 - Early returns to reduce nesting
 - `try/catch` for async operations
-- Express error middleware for centralized handling
+- Hono error responses via `c.json({ error: '...' }, status)`
 - Type-safe error responses
 
 ### Apple Protocol Error Codes
@@ -211,59 +274,41 @@ The settings endpoint (`/api/settings`) must never reflect request headers (`x-f
 
 ## Testing
 
-### Unit Tests
-
 ```bash
-cd backend && npx vitest run    # Node environment
-cd frontend && npx vitest run   # jsdom environment with fake-indexeddb
+pnpm test          # vitest run (CI mode, both frontend + workers projects)
+pnpm test:watch    # vitest watch mode
+pnpm typecheck     # tsc --noEmit for both workers and frontend tsconfigs
 ```
 
-### E2E Tests (Playwright)
+Two vitest projects defined in `vitest.config.ts`:
 
-```bash
-cd e2e && pnpm test                            # Local (requires Docker on port 8080)
-docker compose --profile test run --rm playwright  # Docker-based
-bash e2e/docker-test.sh                        # Full: build + test + zero-trust verify
-```
-
-E2E tests import from `./fixtures` instead of `@playwright/test`.
-
-WebSocket proxy tests use `location.host` to derive URLs dynamically, so they work both locally (`localhost:8080`) and in Docker (`asspp:8080`).
-
-Real-account Docker verification (2026-02-22): authentication succeeds through Wisp, and backend logs contain only connection/stream metadata (no Apple credentials, password tokens, or cookies).
-
-E2E tests cover:
-
-- Wisp proxy (accepts /wisp/ WebSocket, rejects non-wisp paths)
-- Add account flow (device ID field, randomize button, auth)
-- Account detail (device ID, pod display)
-- Settings page (no global device ID section)
-- Search/lookup by bundle ID (verifies iTunes field mapping)
-- Downloads API (iTunesMetadata support, backward compatibility)
-
-### Test Account
-
-Test credentials are stored in environment variables (`TEST_EMAIL`, `TEST_PASSWORD`, `TEST_DEVICE_ID`, `TEST_BUNDLE_ID`) and must never be committed to the repository.
+- **frontend** — jsdom environment, `frontend/tests/**/*.test.{ts,tsx}`, with `fake-indexeddb` setup
+- **workers** — node environment, `src/**/*.test.ts`
 
 ## Deployment
 
 ```bash
-docker compose up --build -d   # Builds and runs on port 8080
+pnpm deploy        # vite build && wrangler deploy
 ```
 
-Single container serves both the Express backend and the Vite-built React SPA. SPA routes are handled by serving `index.html` for all non-API paths.
+This builds the React SPA to `frontend/dist/` then deploys the Workers app with `wrangler deploy`. The Workers Assets binding serves the frontend; SPA routes fall back to `index.html`.
 
-### Docker E2E Testing
-
-The `compose.yml` includes a `playwright` service under the `test` profile:
+### Development
 
 ```bash
-docker compose --profile test run --rm playwright
+pnpm dev           # concurrently "vite" "wrangler dev --port 8787"
 ```
 
-This runs Playwright inside the official `mcr.microsoft.com/playwright` image, connecting to the app container via Docker internal DNS (`http://asspp:8080`). The `asspp` service has a healthcheck so the test container waits until the app is ready.
+Vite dev server proxies `/api` and `/wisp` to the local wrangler dev server.
 
-The `e2e/docker-test.sh` script automates the full flow: build, test, and verify zero-trust by scanning backend logs for credential leaks.
+### Required Cloudflare Resources
+
+Created automatically on first `wrangler deploy` or configured in `wrangler.jsonc`:
+
+- **KV namespace** (`AUTH_KV`) — password hash storage
+- **R2 bucket** (`IPA_BUCKET`) — compiled IPA files
+- **Durable Objects** — WispProxy, DownloadManager (migrations in `wrangler.jsonc`)
+- **Cron trigger** — `0 2 * * *` for auto-cleanup
 
 ## Interface Design System
 
@@ -396,4 +441,4 @@ When the same UI pattern appears in 3+ components, extract it to `components/com
 
 - `Alert`, `Modal`, `Spinner`, `CountrySelect`, `AppIcon`, `Badge`, `ProgressBar`, `icons`
 
-When adding new common components, update this AGENTS.md file accordingly.
+When adding new common components, update this CLAUDE.md file accordingly.

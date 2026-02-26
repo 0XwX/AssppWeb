@@ -1,32 +1,33 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import PageContainer from "../Layout/PageContainer";
-import DownloadItem from "./DownloadItem";
-import { useDownloads } from "../../hooks/useDownloads";
-import { useAccounts } from "../../hooks/useAccounts";
-import { useToastStore } from "../../store/toast";
-import { getAccountContext } from "../../utils/toast";
-import type { DownloadTask } from "../../types";
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import PageContainer from '../Layout/PageContainer';
+import DownloadItem from './DownloadItem';
+import { useDownloads } from '../../hooks/useDownloads';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useToastStore } from '../../store/toast';
+import { getAccountContext } from '../../utils/toast';
+import type { DownloadTask } from '../../types';
 
-type StatusFilter = "all" | DownloadTask["status"];
+type StatusFilter = 'all' | DownloadTask['status'];
+
+function formatStorageSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
 
 export default function DownloadList() {
   const { t } = useTranslation();
-  const {
-    tasks,
-    loading,
-    pauseDownload,
-    resumeDownload,
-    deleteDownload,
-    hashToEmail,
-  } = useDownloads();
-  const [filter, setFilter] = useState<StatusFilter>("all");
+  const { tasks, loading, pauseDownload, resumeDownload, deleteDownload, hashToEmail } =
+    useDownloads();
+  const [filter, setFilter] = useState<StatusFilter>('all');
   const addToast = useToastStore((s) => s.addToast);
   const { accounts } = useAccounts();
 
-  const filtered =
-    filter === "all" ? tasks : tasks.filter((t) => t.status === filter);
+  const totalStorage = tasks.reduce((sum, t) => sum + (t.fileSize ?? 0), 0);
+
+  const filtered = filter === 'all' ? tasks : tasks.filter((t) => t.status === filter);
 
   const sortedTasks = [...filtered].sort((a, b) => {
     const timeA = new Date(a.createdAt || 0).getTime();
@@ -35,7 +36,7 @@ export default function DownloadList() {
   });
 
   function handleDelete(id: string) {
-    if (!confirm(t("downloads.deleteConfirm"))) return;
+    if (!confirm(t('downloads.deleteConfirm'))) return;
 
     const task = tasks.find((t) => t.id === id);
     if (task) {
@@ -44,9 +45,9 @@ export default function DownloadList() {
       const ctx = getAccountContext(account, t);
 
       addToast(
-        t("toast.msg", { appName: task.software.name, ...ctx }),
-        "success",
-        t("toast.title.deleteSuccess"),
+        t('toast.msg', { appName: task.software.name, ...ctx }),
+        'success',
+        t('toast.title.deleteSuccess'),
       );
     }
 
@@ -55,53 +56,46 @@ export default function DownloadList() {
 
   return (
     <PageContainer
-      title={t("downloads.title")}
+      title={t('downloads.title')}
       action={
         <Link
           to="/downloads/add"
           className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
         >
-          {t("downloads.new")}
+          {t('downloads.new')}
         </Link>
       }
     >
       <div className="mb-4 flex gap-2 flex-wrap">
-        {(
-          [
-            "all",
-            "downloading",
-            "pending",
-            "paused",
-            "completed",
-            "failed",
-          ] as StatusFilter[]
-        ).map((status) => (
-          <button
-            key={status}
-            onClick={() => setFilter(status)}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-              filter === status
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
-            {t(`downloads.status.${status}`)}
-            {status !== "all" && (
-              <span className="ml-1">
-                ({tasks.filter((t) => t.status === status).length})
-              </span>
-            )}
-          </button>
-        ))}
+        {(['all', 'downloading', 'pending', 'paused', 'completed', 'failed'] as StatusFilter[]).map(
+          (status) => (
+            <button
+              key={status}
+              onClick={() => setFilter(status)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                filter === status
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+              }`}
+            >
+              {t(`downloads.status.${status}`)}
+              {status !== 'all' && (
+                <span className="ml-1">({tasks.filter((t) => t.status === status).length})</span>
+              )}
+            </button>
+          ),
+        )}
       </div>
 
-      <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-lg text-xs text-amber-700 dark:text-amber-400">
-        {t("downloads.warning")}
-      </div>
+      {totalStorage > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-xs text-blue-700 dark:text-blue-400">
+          {t('downloads.storageUsage', { size: formatStorageSize(totalStorage) })}
+        </div>
+      )}
 
       {loading && tasks.length === 0 ? (
         <div className="text-center text-gray-500 dark:text-gray-400 py-12">
-          {t("downloads.loading")}
+          {t('downloads.loading')}
         </div>
       ) : sortedTasks.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 px-4 my-4 bg-gray-50 dark:bg-gray-900/30 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-2xl">
@@ -121,18 +115,16 @@ export default function DownloadList() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
-            {filter === "all"
-              ? t("downloads.emptyAll")
-              : t("downloads.emptyFilter", {
+            {filter === 'all'
+              ? t('downloads.emptyAll')
+              : t('downloads.emptyFilter', {
                   status: t(`downloads.status.${filter}`),
                 })}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 text-center max-w-sm">
-            {filter === "all"
-              ? t("downloads.emptyAllDesc")
-              : t("downloads.emptyFilterDesc")}
+            {filter === 'all' ? t('downloads.emptyAllDesc') : t('downloads.emptyFilterDesc')}
           </p>
-          {filter === "all" && (
+          {filter === 'all' && (
             <Link
               to="/search"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 hover:shadow-md transition-all active:scale-95"
@@ -150,7 +142,7 @@ export default function DownloadList() {
                   d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"
                 />
               </svg>
-              {t("downloads.searchApps")}
+              {t('downloads.searchApps')}
             </Link>
           )}
         </div>

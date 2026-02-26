@@ -1,15 +1,15 @@
-import { useEffect } from "react";
-import { Link } from "react-router-dom";
-import { useTranslation } from "react-i18next";
-import PageContainer from "../Layout/PageContainer";
-import AppIcon from "../common/AppIcon";
-import CountrySelect from "../common/CountrySelect";
-import { useSearch } from "../../hooks/useSearch";
-import { useAccounts } from "../../hooks/useAccounts";
-import { useSettingsStore } from "../../store/settings";
-import { useToastStore } from "../../store/toast";
-import { countryCodeMap, storeIdToCountry } from "../../apple/config";
-import { firstAccountCountry } from "../../utils/account";
+import { useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import PageContainer from '../Layout/PageContainer';
+import AppIcon from '../common/AppIcon';
+import CountrySelect from '../common/CountrySelect';
+import { useSearch } from '../../hooks/useSearch';
+import { useAccounts } from '../../hooks/useAccounts';
+import { useSettingsStore } from '../../store/settings';
+import { useToastStore } from '../../store/toast';
+import { countryCodeMap, storeIdToCountry } from '../../apple/config';
+import { firstAccountCountry } from '../../utils/account';
 
 export default function SearchPage() {
   const { t } = useTranslation();
@@ -18,20 +18,11 @@ export default function SearchPage() {
   const initialCountry = firstAccountCountry(accounts) ?? defaultCountry;
   const addToast = useToastStore((s) => s.addToast);
 
-  const {
-    term,
-    country,
-    entity,
-    results,
-    loading,
-    error,
-    search,
-    setSearchParam,
-  } = useSearch();
+  const { term, country, entity, results, loading, error, search, setSearchParam } = useSearch();
 
   useEffect(() => {
     if (error) {
-      addToast(error, "error");
+      addToast(error, 'error');
     }
   }, [error, addToast]);
 
@@ -44,14 +35,8 @@ export default function SearchPage() {
   const activeEntity = entity || defaultEntity;
 
   const availableCountryCodes = Array.from(
-    new Set(
-      accounts
-        .map((a) => storeIdToCountry(a.store))
-        .filter(Boolean) as string[],
-    ),
-  ).sort((a, b) =>
-    t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)),
-  );
+    new Set(accounts.map((a) => storeIdToCountry(a.store)).filter(Boolean) as string[]),
+  ).sort((a, b) => t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)));
 
   const allCountryCodes = Object.keys(countryCodeMap).sort((a, b) =>
     t(`countries.${a}`, a).localeCompare(t(`countries.${b}`, b)),
@@ -64,14 +49,14 @@ export default function SearchPage() {
   }
 
   return (
-    <PageContainer title={t("search.title")}>
+    <PageContainer title={t('search.title')}>
       <form onSubmit={handleSubmit} className="space-y-4 mb-6">
         <div className="flex gap-2">
           <input
             type="text"
             value={term}
             onChange={(e) => setSearchParam({ term: e.target.value })}
-            placeholder={t("search.placeholder")}
+            placeholder={t('search.placeholder')}
             className="flex-1 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
           />
           <button
@@ -79,7 +64,7 @@ export default function SearchPage() {
             disabled={loading || !term.trim()}
             className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors whitespace-nowrap"
           >
-            {loading ? t("search.searching") : t("search.button")}
+            {loading ? t('search.searching') : t('search.button')}
           </button>
         </div>
         <div className="flex w-full gap-3 overflow-hidden">
@@ -119,10 +104,10 @@ export default function SearchPage() {
             </svg>
           </div>
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 text-center">
-            {t("search.empty")}
+            {t('search.empty')}
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-sm">
-            {t("search.emptyDesc")}
+            {t('search.emptyDesc')}
           </p>
         </div>
       )}
@@ -138,14 +123,12 @@ export default function SearchPage() {
             <div className="flex items-center gap-4">
               <AppIcon url={app.artworkUrl} name={app.name} size="md" />
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-gray-900 dark:text-white truncate">
-                  {app.name}
-                </p>
+                <p className="font-medium text-gray-900 dark:text-white truncate">{app.name}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                   {app.artistName}
                 </p>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-400 dark:text-gray-500">
-                  <span>{app.formattedPrice ?? t("search.free")}</span>
+                  <span>{app.formattedPrice ?? t('search.free')}</span>
                   <span>{app.primaryGenreName}</span>
                   <span>
                     {app.averageUserRating.toFixed(1)} ({app.userRatingCount})

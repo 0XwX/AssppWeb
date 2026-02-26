@@ -1,15 +1,15 @@
-import { useTranslation } from "react-i18next";
-import { useAccounts } from "./useAccounts";
-import { useToastStore } from "../store/toast";
-import { useDownloadsStore } from "../store/downloads";
-import { getDownloadInfo } from "../apple/download";
-import { purchaseApp } from "../apple/purchase";
-import { authenticate } from "../apple/authenticate";
-import { apiPost } from "../api/client";
-import { accountHash } from "../utils/account";
-import { getErrorMessage } from "../utils/error";
-import { getAccountContext } from "../utils/toast";
-import type { Account, Software } from "../types";
+import { useTranslation } from 'react-i18next';
+import { useAccounts } from './useAccounts';
+import { useToastStore } from '../store/toast';
+import { useDownloadsStore } from '../store/downloads';
+import { getDownloadInfo } from '../apple/download';
+import { purchaseApp } from '../apple/purchase';
+import { authenticate } from '../apple/authenticate';
+import { apiPost } from '../api/client';
+import { accountHash } from '../utils/account';
+import { getErrorMessage } from '../utils/error';
+import { getAccountContext } from '../utils/toast';
+import type { Account, Software } from '../types';
 
 /**
  * Shared hook for download & purchase actions.
@@ -21,23 +21,15 @@ export function useDownloadAction() {
   const fetchTasks = useDownloadsStore((s) => s.fetchTasks);
   const { t } = useTranslation();
 
-  async function startDownload(
-    account: Account,
-    app: Software,
-    versionId?: string,
-  ) {
+  async function startDownload(account: Account, app: Software, versionId?: string) {
     const ctx = getAccountContext(account, t);
     const appName = app.name;
 
-    const { output, updatedCookies } = await getDownloadInfo(
-      account,
-      app,
-      versionId,
-    );
+    const { output, updatedCookies } = await getDownloadInfo(account, app, versionId);
     await updateAccount({ ...account, cookies: updatedCookies });
     const hash = await accountHash(account);
 
-    await apiPost("/api/downloads", {
+    await apiPost('/api/downloads', {
       software: { ...app, version: output.bundleShortVersionString },
       accountHash: hash,
       downloadURL: output.downloadURL,
@@ -47,11 +39,7 @@ export function useDownloadAction() {
 
     fetchTasks();
 
-    addToast(
-      t("toast.msg", { appName, ...ctx }),
-      "info",
-      t("toast.title.downloadStarted"),
-    );
+    addToast(t('toast.msg', { appName, ...ctx }), 'info', t('toast.title.downloadStarted'));
   }
 
   async function acquireLicense(account: Account, app: Software) {
@@ -79,36 +67,32 @@ export function useDownloadAction() {
     const result = await purchaseApp(currentAccount, app);
     await updateAccount({ ...currentAccount, cookies: result.updatedCookies });
 
-    addToast(
-      t("toast.msg", { appName, ...ctx }),
-      "success",
-      t("toast.title.licenseSuccess"),
-    );
+    addToast(t('toast.msg', { appName, ...ctx }), 'success', t('toast.title.licenseSuccess'));
   }
 
   function toastDownloadError(account: Account, app: Software, error: unknown) {
     const ctx = getAccountContext(account, t);
     addToast(
-      t("toast.msgFailed", {
+      t('toast.msgFailed', {
         appName: app.name,
         ...ctx,
-        error: getErrorMessage(error, t("toast.title.downloadFailed")),
+        error: getErrorMessage(error, t('toast.title.downloadFailed')),
       }),
-      "error",
-      t("toast.title.downloadFailed"),
+      'error',
+      t('toast.title.downloadFailed'),
     );
   }
 
   function toastLicenseError(account: Account, app: Software, error: unknown) {
     const ctx = getAccountContext(account, t);
     addToast(
-      t("toast.msgFailed", {
+      t('toast.msgFailed', {
         appName: app.name,
         ...ctx,
-        error: getErrorMessage(error, t("toast.title.licenseFailed")),
+        error: getErrorMessage(error, t('toast.title.licenseFailed')),
       }),
-      "error",
-      t("toast.title.licenseFailed"),
+      'error',
+      t('toast.title.licenseFailed'),
     );
   }
 
