@@ -89,13 +89,8 @@ By default, IPA files are streamed through the Worker, which is limited by Worke
 
 1. Go to Cloudflare Dashboard → R2 → your bucket → Settings → Public access
 2. Add a Custom Domain (e.g. `cdn.example.com`), wait for DNS to propagate
-3. Set `R2_CDN_DOMAIN` in `wrangler.jsonc` under `vars`:
-   ```jsonc
-   "vars": {
-     "R2_CDN_DOMAIN": "cdn.example.com"
-   }
-   ```
-4. Redeploy: `pnpm deploy`
+3. In Cloudflare Dashboard → Workers & Pages → your Worker → Settings → Variables and Secrets, add `R2_CDN_DOMAIN` with your CDN domain (e.g. `cdn.example.com`)
+4. Redeploy: `pnpm deploy` (not needed if set via Dashboard)
 5. Open the Settings page and verify CDN Domain shows a green "Enabled" badge
 
 **Optional optimizations:**

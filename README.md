@@ -91,13 +91,8 @@ pnpm dev
 
 1. 进入 Cloudflare Dashboard → R2 → 你的 bucket → Settings → Public access
 2. 添加 Custom Domain（如 `cdn.example.com`），等待 DNS 生效
-3. 在 `wrangler.jsonc` 的 `vars` 中设置 `R2_CDN_DOMAIN`：
-   ```jsonc
-   "vars": {
-     "R2_CDN_DOMAIN": "cdn.example.com"
-   }
-   ```
-4. 重新部署：`pnpm deploy`
+3. 在 Cloudflare Dashboard → Workers & Pages → 你的 Worker → Settings → Variables and Secrets 中添加 `R2_CDN_DOMAIN`，值为你的 CDN 域名（如 `cdn.example.com`）
+4. 重新部署：`pnpm deploy`（如果通过 Dashboard 设置则无需重新部署）
 5. 打开 Settings 页面，确认 CDN Domain 显示为绿色 "Enabled" 状态
 
 **可选优化：**
