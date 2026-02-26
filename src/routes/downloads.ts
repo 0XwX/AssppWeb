@@ -11,13 +11,18 @@ function requireHash(hash: string | undefined): hash is string {
 
 // POST /downloads — create a new download task
 downloads.post('/downloads', async (c) => {
-  const body = await c.req.json<{
+  let body: {
     software: Software;
     accountHash: string;
     downloadURL: string;
     sinfs: Sinf[];
     iTunesMetadata?: string;
-  }>();
+  };
+  try {
+    body = await c.req.json();
+  } catch {
+    return c.json({ error: 'Invalid JSON body' }, 400);
+  }
 
   const { software, accountHash, downloadURL, sinfs, iTunesMetadata } = body;
 

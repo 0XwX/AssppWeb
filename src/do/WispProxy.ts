@@ -130,7 +130,8 @@ export class WispProxy extends DurableObject<Env> {
         this.sendClose(streamId, CLOSE_REASON_NETWORK_ERROR);
         this.streams.delete(streamId);
       });
-    } catch {
+    } catch (e) {
+      console.error(`Wisp CONNECT failed for stream ${streamId} to ${hostname}:${port}:`, e);
       this.sendClose(streamId, CLOSE_REASON_NETWORK_ERROR);
     }
   }
@@ -160,6 +161,7 @@ export class WispProxy extends DurableObject<Env> {
     try {
       await stream.writer.write(payload);
     } catch {
+      this.sendClose(streamId, CLOSE_REASON_NETWORK_ERROR);
       this.streams.delete(streamId);
     }
   }

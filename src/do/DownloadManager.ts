@@ -6,6 +6,7 @@ import {
   MAX_DOWNLOAD_SIZE,
   UPLOAD_PART_SIZE,
   CDN_FETCH_TIMEOUT_MS,
+  CDN_STALL_TIMEOUT_MS,
   CDN_FETCH_MAX_RETRIES,
   MIN_ACCOUNT_HASH_LENGTH,
 } from '../config.js';
@@ -264,11 +265,8 @@ export class DownloadManager extends DurableObject<Env> {
     this.abortControllers.get(id)?.abort();
     this.abortControllers.delete(id);
 
-    // Delete R2 file
-    const r2key = await this.ctx.storage.get<string>(`r2key:${id}`);
-    if (r2key) {
-      await this.env.IPA_BUCKET.delete(r2key).catch((e) => console.error('R2 delete failed:', e));
-    }
+    const storedR2Key = (await this.ctx.storage.get<string>(`r2key:${id}`)) ?? null;
+    await this.deleteR2Files(id, accountHash, storedR2Key, task);
 
     // Remove from storage
     await this.ctx.storage.delete(`task:${id}`);
@@ -418,7 +416,8 @@ export class DownloadManager extends DurableObject<Env> {
       let task: DownloadTask;
       try {
         task = JSON.parse(raw) as DownloadTask;
-      } catch {
+      } catch (e) {
+        console.error(`Corrupt task data at ${key}, skipping:`, e);
         continue;
       }
       const r2key = (await this.ctx.storage.get<string>(`r2key:${id}`)) ?? null;
@@ -445,7 +444,7 @@ export class DownloadManager extends DurableObject<Env> {
         const createdAt = new Date(entry.task.createdAt).getTime();
         if (createdAt < cutoff) {
           const size = entry.r2key ? (sizeMap.get(entry.r2key) ?? 0) : 0;
-          await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key);
+          await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key, entry.task);
           if (entry.r2key) sizeMap.delete(entry.r2key);
           totalSize -= size;
           allTasks.splice(allTasks.indexOf(entry), 1);
@@ -465,7 +464,7 @@ export class DownloadManager extends DurableObject<Env> {
         for (const entry of allTasks) {
           if (totalSize <= maxBytes) break;
           const size = entry.r2key ? (sizeMap.get(entry.r2key) ?? 0) : 0;
-          await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key);
+          await this.purgeTask(entry.id, entry.task.accountHash, entry.r2key, entry.task);
           if (entry.r2key) sizeMap.delete(entry.r2key);
           totalSize -= size;
           deletedBySize++;
@@ -503,17 +502,40 @@ export class DownloadManager extends DurableObject<Env> {
   }
 
   /** Delete a task completely: R2 object + DO storage + account index */
-  private async purgeTask(id: string, accountHash: string, r2key: string | null): Promise<void> {
+  private async purgeTask(
+    id: string,
+    accountHash: string,
+    r2key: string | null,
+    task?: DownloadTask | null,
+  ): Promise<void> {
     this.abortControllers.get(id)?.abort();
     this.abortControllers.delete(id);
-    if (r2key) {
-      await this.env.IPA_BUCKET.delete(r2key).catch((e) =>
-        console.error('R2 cleanup delete failed:', e),
-      );
-    }
+
+    await this.deleteR2Files(id, accountHash, r2key, task);
     await this.ctx.storage.delete(`task:${id}`);
     await this.ctx.storage.delete(`r2key:${id}`);
     await this.removeFromAccountIndex(accountHash, id);
+  }
+
+  /** Delete R2 files for a task — stored key + computed key + .new temp key */
+  private async deleteR2Files(
+    id: string,
+    accountHash: string,
+    r2key: string | null,
+    task?: DownloadTask | null,
+  ): Promise<void> {
+    const keysToDelete = new Set<string>();
+    if (r2key) keysToDelete.add(r2key);
+    if (task) {
+      const computed = `packages/${accountHash}/${task.software.bundleID}/${id}.ipa`;
+      keysToDelete.add(computed);
+      keysToDelete.add(computed + '.new');
+    }
+    if (keysToDelete.size > 0) {
+      await this.env.IPA_BUCKET.delete([...keysToDelete]).catch((e) =>
+        console.error(`R2 delete failed for task=${id}:`, e),
+      );
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -625,12 +647,26 @@ export class DownloadManager extends DurableObject<Env> {
     };
 
     const reader = body.getReader();
+    let stallTimer: ReturnType<typeof setTimeout> | undefined;
 
     try {
       while (true) {
         if (signal.aborted) throw new DOMException('Aborted', 'AbortError');
 
-        const { done, value } = await reader.read();
+        const readResult = await Promise.race([
+          reader.read(),
+          new Promise<never>((_, reject) => {
+            stallTimer = setTimeout(() => {
+              const pct = contentLength > 0 ? Math.round((downloaded / contentLength) * 100) : '?';
+              reject(
+                new Error(`CDN stall: no data for ${CDN_STALL_TIMEOUT_MS / 1000}s at ${pct}%`),
+              );
+            }, CDN_STALL_TIMEOUT_MS);
+          }),
+        ]);
+        clearTimeout(stallTimer);
+
+        const { done, value } = readResult;
         if (done) break;
 
         downloaded += value.length;
@@ -679,9 +715,11 @@ export class DownloadManager extends DurableObject<Env> {
       parts.sort((a, b) => a.partNumber - b.partNumber);
       await upload.complete(parts);
     } catch (err) {
+      clearTimeout(stallTimer);
       // pendingUpload may still be in-flight if error occurred during read
       const pending = pendingUpload as Promise<void> | null;
-      if (pending) await pending.catch(() => {});
+      if (pending)
+        await pending.catch((e) => console.error('Pending part upload error during abort:', e));
       await upload.abort().catch((e) => console.error('Multipart upload abort failed:', e));
       throw err;
     } finally {
@@ -841,7 +879,11 @@ export class DownloadManager extends DurableObject<Env> {
       try {
         const parsed = plist.parse(xmlBuffer.toString('utf-8'));
         metaBuffer = Buffer.from(bplistCreator(parsed as Record<string, unknown>));
-      } catch {
+      } catch (e) {
+        console.error(
+          `iTunesMetadata XML->bplist conversion failed for task ${task.id}, using raw XML:`,
+          e,
+        );
         metaBuffer = xmlBuffer;
       }
       files.push({ name: 'iTunesMetadata.plist', data: metaBuffer });

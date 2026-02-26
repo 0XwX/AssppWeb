@@ -68,18 +68,22 @@ app.get('*', async (c) => {
 // ---------------------------------------------------------------------------
 
 async function scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-  const stub = dm(env);
+  try {
+    const stub = dm(env);
 
-  // DO config overrides env vars
-  const config = await stub.getConfig();
-  const envDays = parseInt(env.AUTO_CLEANUP_DAYS || '0');
-  const envMaxMB = parseInt(env.AUTO_CLEANUP_MAX_MB || '0');
-  const days = config.autoCleanupDays ?? envDays;
-  const maxMB = config.autoCleanupMaxMB ?? envMaxMB;
+    // DO config overrides env vars
+    const config = await stub.getConfig();
+    const envDays = parseInt(env.AUTO_CLEANUP_DAYS || '0');
+    const envMaxMB = parseInt(env.AUTO_CLEANUP_MAX_MB || '0');
+    const days = config.autoCleanupDays ?? envDays;
+    const maxMB = config.autoCleanupMaxMB ?? envMaxMB;
 
-  // Always run cleanup — even if days/maxMB are 0, orphaned R2 files need purging
-  const result = await stub.cleanupExpired(days, maxMB);
-  console.log('Cleanup result:', JSON.stringify(result));
+    // Always run cleanup — even if days/maxMB are 0, orphaned R2 files need purging
+    const result = await stub.cleanupExpired(days, maxMB);
+    console.log('Cleanup result:', JSON.stringify(result));
+  } catch (err) {
+    console.error('Scheduled cleanup failed:', err instanceof Error ? err.message : err);
+  }
 }
 
 export default { fetch: app.fetch, scheduled };

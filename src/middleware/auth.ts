@@ -163,7 +163,10 @@ export async function getPasswordHash(env: Env): Promise<string | null> {
   if (!hash) {
     // Fallback: migrate from DO storage (KV write failure is non-fatal)
     hash = await dm(env).getPasswordHash();
-    if (hash) await env.AUTH_KV.put(KV_PASSWORD_KEY, hash).catch(() => {});
+    if (hash)
+      await env.AUTH_KV.put(KV_PASSWORD_KEY, hash).catch((e) => {
+        console.error('Password hash KV migration failed:', e);
+      });
   }
   return hash;
 }
