@@ -69,32 +69,18 @@ install.get('/install/:id/payload.ipa', async (c) => {
   const r2key = await dm(c.env).getR2KeyPublic(id);
   if (!r2key) return c.json({ error: 'Package not found' }, 404);
 
-  // Check Cloudflare edge cache (auto-handles Range / If-None-Match)
-  const cache = caches.default;
-  const cacheUrl = new URL(c.req.url);
-  cacheUrl.search = '';
-  const cacheKey = new Request(cacheUrl.toString(), { method: 'GET' });
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
-
-  // Cache miss — fetch from R2
   const obj = await c.env.IPA_BUCKET.get(r2key);
   if (!obj) return c.json({ error: 'Package not found' }, 404);
 
-  const response = new Response(obj.body, {
+  return new Response(obj.body, {
     headers: {
       'Content-Type': 'application/octet-stream',
       'Content-Length': String(obj.size),
       ETag: obj.etag,
       'Last-Modified': obj.uploaded.toUTCString(),
-      'Cache-Control': 'public, max-age=3600, s-maxage=86400',
+      'Cache-Control': 'public, max-age=3600',
     },
   });
-
-  // Store in edge cache asynchronously
-  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
-
-  return response;
 });
 
 // GET /install/:id/icon-small.png
