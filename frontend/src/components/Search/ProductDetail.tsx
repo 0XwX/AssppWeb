@@ -5,7 +5,7 @@ import PageContainer from '../Layout/PageContainer';
 import AppIcon from '../common/AppIcon';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useDownloadAction } from '../../hooks/useDownloadAction';
-import { lookupApp } from '../../api/search';
+import { lookupApp, lookupById } from '../../api/search';
 import { storeIdToCountry } from '../../apple/config';
 import type { Software } from '../../types';
 
@@ -35,7 +35,8 @@ export default function ProductDetail() {
   useEffect(() => {
     if (!stateApp && appId) {
       setLoading(true);
-      lookupApp(appId, country)
+      const lookup = /^\d+$/.test(appId) ? lookupById(appId, country) : lookupApp(appId, country);
+      lookup
         .then((result) => {
           setApp(result);
           setLoading(false);

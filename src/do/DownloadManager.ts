@@ -193,6 +193,23 @@ export class DownloadManager extends DurableObject<Env> {
       throw new Error('Invalid accountHash');
     }
 
+    // Deduplicate: reject if same bundleID + version already exists for this account
+    const existingIds =
+      (await this.ctx.storage.get<string[]>(`accounts:${params.accountHash}`)) ?? [];
+    for (const existingId of existingIds) {
+      const existing = await this.loadTask(existingId);
+      if (
+        existing &&
+        existing.software.bundleID === params.software.bundleID &&
+        existing.software.version === params.software.version &&
+        existing.status !== 'failed'
+      ) {
+        throw new Error(
+          `Already downloading: ${existing.software.name} v${existing.software.version}`,
+        );
+      }
+    }
+
     const task: DownloadTask = {
       id: crypto.randomUUID(),
       software: params.software,

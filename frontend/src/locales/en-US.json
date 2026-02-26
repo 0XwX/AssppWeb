@@ -60,6 +60,16 @@
     "empty": "Search for apps to get started.",
     "emptyDesc": "Enter an app name or Bundle ID to quickly search the App Store and get app details and licenses.",
     "free": "Free",
+    "noMatchingAccount": "No account available for the selected region.",
+    "tabs": {
+      "search": "Search",
+      "charts": "Top Charts"
+    },
+    "charts": {
+      "topFree": "Top Free",
+      "empty": "No charts available",
+      "emptyDesc": "Select a country to view top charts."
+    },
     "product": {
       "title": "App Details",
       "notFound": "Could not find the requested app.",

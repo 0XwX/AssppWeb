@@ -1,16 +1,20 @@
+<div align="center">
+
 # AssppWeb
 
 A web-based tool for acquiring and installing iOS apps outside the App Store. Authenticate with your Apple ID, search for apps, acquire licenses, and install IPAs directly to your device.
 
+This branch runs on Cloudflare Workers + Durable Objects + R2, fully compatible with the free plan. No Containers required. One-click deploy supported.
+
 [中文](README.md)
 
-![preview](./resources/preview.png)
-
-## One-Click Deploy
+<img src="./resources/preview.png" width="600" />
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/0XwX/AssppWeb)
 
 Click the button to automatically fork the repo, provision KV / R2 / Durable Objects, and deploy to your Cloudflare account. The free plan is sufficient.
+
+</div>
 
 ## Security Warning
 

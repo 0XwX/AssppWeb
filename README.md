@@ -1,16 +1,20 @@
+<div align="center">
+
 # AssppWeb
 
 基于浏览器的 iOS 应用获取与安装工具。登录 Apple ID，搜索应用，获取许可证，下载 IPA 并直接安装到设备。
 
+本分支基于 Cloudflare Workers + Durable Objects + R2 构建，完全兼容免费计划，无需 Container，支持一键部署。
+
 [English](README_EN.md)
 
-![preview](./resources/preview.png)
-
-## 一键部署
+<img src="./resources/preview.png" width="600" />
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/0XwX/AssppWeb)
 
 点击按钮自动 Fork 仓库，创建 KV / R2 / Durable Objects 资源，部署到你的 Cloudflare 账号。免费计划即可使用。
+
+</div>
 
 ## 安全警告
 

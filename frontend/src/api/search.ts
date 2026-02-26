@@ -20,3 +20,16 @@ export async function lookupApp(bundleId: string, country: string): Promise<Soft
   const params = new URLSearchParams({ bundleId, country });
   return apiGet<Software | null>(`/api/lookup?${params}`);
 }
+
+export async function lookupById(id: string, country: string): Promise<Software | null> {
+  const params = new URLSearchParams({ id, country });
+  return apiGet<Software | null>(`/api/lookup?${params}`);
+}
+
+export async function fetchTopCharts(
+  country: string,
+  chart: 'top-free' | 'top-paid' = 'top-free',
+): Promise<Software[]> {
+  const params = new URLSearchParams({ country, chart });
+  return apiGet<Software[]>(`/api/top-charts?${params}`);
+}

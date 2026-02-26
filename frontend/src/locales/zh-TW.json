@@ -60,6 +60,16 @@
     "empty": "搜尋應用程式以開始。",
     "emptyDesc": "輸入應用程式名稱或 Bundle ID，快速在 App Store 中尋找並獲取應用程式詳情與授權。",
     "free": "免費",
+    "noMatchingAccount": "目前地區沒有可用帳號。",
+    "tabs": {
+      "search": "搜尋",
+      "charts": "排行榜"
+    },
+    "charts": {
+      "topFree": "免費排行",
+      "empty": "暫無資料",
+      "emptyDesc": "選擇國家 / 地區查看熱門應用程式排行。"
+    },
     "product": {
       "title": "應用程式詳情",
       "notFound": "找不到請求的應用程式。",

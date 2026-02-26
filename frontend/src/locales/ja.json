@@ -60,6 +60,16 @@
     "empty": "検索して開始してください。",
     "emptyDesc": "アプリ名または Bundle ID を入力して、App Store をすばやく検索し、アプリの詳細とライセンスを取得します。",
     "free": "無料",
+    "noMatchingAccount": "選択した地域に対応するアカウントがありません。",
+    "tabs": {
+      "search": "検索",
+      "charts": "ランキング"
+    },
+    "charts": {
+      "topFree": "無料トップ",
+      "empty": "データがありません",
+      "emptyDesc": "国 / 地域を選択して人気アプリのランキングを表示します。"
+    },
     "product": {
       "title": "アプリの詳細",
       "notFound": "リクエストされたアプリが見つかりません。",
