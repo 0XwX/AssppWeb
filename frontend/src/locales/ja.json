@@ -1,5 +1,23 @@
 {
   "loading": "読み込み中...",
+  "auth": {
+    "loginPrompt": "アクセスパスワードを入力してください。",
+    "passwordPlaceholder": "アクセスパスワード",
+    "loginButton": "ログイン",
+    "invalidPassword": "パスワードが正しくありません。",
+    "setupPrompt": "このインスタンスを保護するためにパスワードを設定してください。",
+    "confirmPassword": "パスワード確認",
+    "setupButton": "パスワードを設定",
+    "passwordMismatch": "パスワードが一致しません。",
+    "setupFailed": "パスワードの設定に失敗しました。",
+    "logout": "ログアウト",
+    "changePasswordBtn": "パスワード変更",
+    "changePasswordTitle": "パスワード変更",
+    "currentPassword": "現在のパスワード",
+    "newPassword": "新しいパスワード",
+    "passwordChanged": "パスワードが変更されました。",
+    "changeFailed": "パスワードの変更に失敗しました。"
+  },
   "theme": {
     "light": "ライトモード",
     "dark": "ダークモード",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "サーバー",
-      "uptime": "稼働時間",
       "offline": "サーバーに接続できません。",
-      "configuration": "サーバー設定",
       "enabled": "有効",
       "disabled": "無効",
-      "notSet": "未設定（自動検出）"
+      "accessPassword": "アクセスパスワード",
+      "cleanupDays": "自動クリーンアップ（日数）",
+      "cleanupDaysHint": "N日以上経過したパッケージを削除。0 = 無効。",
+      "cleanupMaxMB": "最大ストレージ（MB）",
+      "cleanupMaxMBHint": "合計がN MBを超えた場合、古いものから削除。0 = 無効。",
+      "saveCleanup": "保存",
+      "saved": "設定を保存しました。",
+      "saveFailed": "設定の保存に失敗しました。"
     },
     "data": {
       "title": "データ",

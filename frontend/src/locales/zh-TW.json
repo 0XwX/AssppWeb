@@ -1,5 +1,23 @@
 {
   "loading": "載入中...",
+  "auth": {
+    "loginPrompt": "請輸入存取密碼以繼續。",
+    "passwordPlaceholder": "存取密碼",
+    "loginButton": "登入",
+    "invalidPassword": "密碼錯誤，請重試。",
+    "setupPrompt": "設定存取密碼以保護此實例。",
+    "confirmPassword": "確認密碼",
+    "setupButton": "設定密碼",
+    "passwordMismatch": "兩次輸入的密碼不一致。",
+    "setupFailed": "設定密碼失敗。",
+    "logout": "登出",
+    "changePasswordBtn": "變更密碼",
+    "changePasswordTitle": "變更密碼",
+    "currentPassword": "目前密碼",
+    "newPassword": "新密碼",
+    "passwordChanged": "密碼變更成功。",
+    "changeFailed": "變更密碼失敗。"
+  },
   "theme": {
     "light": "日間模式",
     "dark": "夜間模式",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "伺服器",
-      "uptime": "運行時間",
       "offline": "無法連線至伺服器。",
-      "configuration": "伺服器配置",
       "enabled": "已啟用",
       "disabled": "已停用",
-      "notSet": "未設定（自動偵測）"
+      "accessPassword": "存取密碼",
+      "cleanupDays": "自動清理（天）",
+      "cleanupDaysHint": "刪除超過 N 天的安裝套件。0 = 停用。",
+      "cleanupMaxMB": "最大儲存（MB）",
+      "cleanupMaxMBHint": "總容量超過 N MB 時從最舊的開始刪除。0 = 停用。",
+      "saveCleanup": "儲存",
+      "saved": "設定已儲存。",
+      "saveFailed": "儲存設定失敗。"
     },
     "data": {
       "title": "資料",

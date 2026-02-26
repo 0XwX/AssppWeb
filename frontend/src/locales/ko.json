@@ -1,5 +1,23 @@
 {
   "loading": "로딩 중...",
+  "auth": {
+    "loginPrompt": "접근 비밀번호를 입력하세요.",
+    "passwordPlaceholder": "접근 비밀번호",
+    "loginButton": "로그인",
+    "invalidPassword": "비밀번호가 올바르지 않습니다.",
+    "setupPrompt": "이 인스턴스를 보호하기 위해 비밀번호를 설정하세요.",
+    "confirmPassword": "비밀번호 확인",
+    "setupButton": "비밀번호 설정",
+    "passwordMismatch": "비밀번호가 일치하지 않습니다.",
+    "setupFailed": "비밀번호 설정에 실패했습니다.",
+    "logout": "로그아웃",
+    "changePasswordBtn": "비밀번호 변경",
+    "changePasswordTitle": "비밀번호 변경",
+    "currentPassword": "현재 비밀번호",
+    "newPassword": "새 비밀번호",
+    "passwordChanged": "비밀번호가 변경되었습니다.",
+    "changeFailed": "비밀번호 변경에 실패했습니다."
+  },
   "theme": {
     "light": "라이트 모드",
     "dark": "다크 모드",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "서버",
-      "uptime": "가동 시간",
       "offline": "서버에 연결할 수 없습니다.",
-      "configuration": "서버 구성",
       "enabled": "활성화됨",
       "disabled": "비활성화됨",
-      "notSet": "미설정 (자동 감지)"
+      "accessPassword": "접근 비밀번호",
+      "cleanupDays": "자동 정리 (일)",
+      "cleanupDaysHint": "N일이 지난 패키지를 삭제합니다. 0 = 비활성화.",
+      "cleanupMaxMB": "최대 저장 용량 (MB)",
+      "cleanupMaxMBHint": "총 용량이 N MB를 초과하면 오래된 것부터 삭제. 0 = 비활성화.",
+      "saveCleanup": "저장",
+      "saved": "설정이 저장되었습니다.",
+      "saveFailed": "설정 저장에 실패했습니다."
     },
     "data": {
       "title": "데이터",

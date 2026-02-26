@@ -1,5 +1,23 @@
 {
   "loading": "加载中...",
+  "auth": {
+    "loginPrompt": "请输入访问密码以继续。",
+    "passwordPlaceholder": "访问密码",
+    "loginButton": "登录",
+    "invalidPassword": "密码错误，请重试。",
+    "setupPrompt": "设置访问密码以保护此实例。",
+    "confirmPassword": "确认密码",
+    "setupButton": "设置密码",
+    "passwordMismatch": "两次输入的密码不一致。",
+    "setupFailed": "设置密码失败。",
+    "logout": "退出登录",
+    "changePasswordBtn": "修改密码",
+    "changePasswordTitle": "修改密码",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "passwordChanged": "密码修改成功。",
+    "changeFailed": "修改密码失败。"
+  },
   "theme": {
     "light": "日间模式",
     "dark": "夜间模式",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "服务器",
-      "uptime": "运行时间",
       "offline": "无法连接到服务器。",
-      "configuration": "服务器配置",
       "enabled": "已启用",
       "disabled": "已禁用",
-      "notSet": "未设置（自动检测）"
+      "accessPassword": "访问密码",
+      "cleanupDays": "自动清理（天）",
+      "cleanupDaysHint": "删除超过 N 天的安装包。0 = 禁用。",
+      "cleanupMaxMB": "最大存储（MB）",
+      "cleanupMaxMBHint": "总容量超过 N MB 时从最旧的开始删除。0 = 禁用。",
+      "saveCleanup": "保存",
+      "saved": "设置已保存。",
+      "saveFailed": "保存设置失败。"
     },
     "data": {
       "title": "数据",

@@ -1,5 +1,23 @@
 {
   "loading": "Loading...",
+  "auth": {
+    "loginPrompt": "Enter the access password to continue.",
+    "passwordPlaceholder": "Access Password",
+    "loginButton": "Sign In",
+    "invalidPassword": "Invalid password. Please try again.",
+    "setupPrompt": "Set an access password to protect this instance.",
+    "confirmPassword": "Confirm Password",
+    "setupButton": "Set Password",
+    "passwordMismatch": "Passwords do not match.",
+    "setupFailed": "Failed to set password.",
+    "logout": "Sign Out",
+    "changePasswordBtn": "Change Password",
+    "changePasswordTitle": "Change Password",
+    "currentPassword": "Current Password",
+    "newPassword": "New Password",
+    "passwordChanged": "Password changed successfully.",
+    "changeFailed": "Failed to change password."
+  },
   "theme": {
     "light": "Light Mode",
     "dark": "Dark Mode",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "Server",
-      "uptime": "Uptime",
       "offline": "Unable to connect to server.",
-      "configuration": "Configuration",
       "enabled": "Enabled",
       "disabled": "Disabled",
-      "notSet": "Not set (auto-detect)"
+      "accessPassword": "Access Password",
+      "cleanupDays": "Auto Cleanup (Days)",
+      "cleanupDaysHint": "Delete packages older than N days. 0 = disabled.",
+      "cleanupMaxMB": "Max Storage (MB)",
+      "cleanupMaxMBHint": "Delete oldest packages when total exceeds N MB. 0 = disabled.",
+      "saveCleanup": "Save",
+      "saved": "Settings saved.",
+      "saveFailed": "Failed to save settings."
     },
     "data": {
       "title": "Data",

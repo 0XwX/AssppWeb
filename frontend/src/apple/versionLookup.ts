@@ -77,19 +77,14 @@ export async function getVersionMetadata(
       throw new Error("Missing bundleShortVersionString");
     }
 
-    const rawReleaseDate = itemMetadata.releaseDate;
-    if (!rawReleaseDate) {
-      throw new Error("Missing releaseDate");
-    }
-    const releaseDate =
-      rawReleaseDate instanceof Date
-        ? rawReleaseDate.toISOString()
-        : String(rawReleaseDate);
+    const assetInfo = item['asset-info'] as Record<string, any> | undefined;
+    const rawSize = assetInfo?.['file-size'];
+    const fileSize = rawSize != null ? Number(rawSize) : undefined;
 
     return {
       metadata: {
         displayVersion: bundleShortVersionString,
-        releaseDate,
+        fileSize: fileSize && !isNaN(fileSize) ? fileSize : undefined,
       },
       updatedCookies: cookies,
     };

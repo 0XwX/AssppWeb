@@ -12,6 +12,13 @@ import { getErrorMessage } from "../../utils/error";
 import { useToastStore } from "../../store/toast";
 import type { Software, VersionMetadata } from "../../types";
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
 export default function VersionHistory() {
   const { appId } = useParams<{ appId: string }>();
   const location = useLocation();
@@ -168,9 +175,9 @@ export default function VersionHistory() {
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       {meta ? `v${meta.displayVersion}` : `ID: ${versionId}`}
                     </p>
-                    {meta && (
+                    {meta?.fileSize && (
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {new Date(meta.releaseDate).toLocaleDateString()}
+                        {formatFileSize(meta.fileSize)}
                       </p>
                     )}
                     {!meta && !isLoadingMeta && (

@@ -58,7 +58,7 @@ export interface DownloadOutput {
 
 export interface VersionMetadata {
   displayVersion: string;
-  releaseDate: string;
+  fileSize?: number;
 }
 
 export interface DownloadTask {

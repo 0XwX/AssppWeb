@@ -2,12 +2,15 @@ import { Routes, Route } from "react-router-dom";
 import { lazy, Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettingsStore } from "./store/settings";
+import { useAuthStore } from "./store/auth";
 
 import Sidebar from "./components/Layout/Sidebar";
 import MobileNav from "./components/Layout/MobileNav";
 import MobileHeader from "./components/Layout/MobileHeader";
 import ToastContainer from "./components/common/ToastContainer";
 import GlobalDownloadNotifier from "./components/common/GlobalDownloadNotifier";
+import LoginPage from "./components/Auth/LoginPage";
+import SetupPage from "./components/Auth/SetupPage";
 
 const HomePage = lazy(() => import("./components/Welcome/HomePage"));
 const AccountList = lazy(() => import("./components/Account/AccountList"));
@@ -34,6 +37,11 @@ function Loading() {
 
 export default function App() {
   const theme = useSettingsStore((s) => s.theme);
+  const { authenticated, required, setup, checkAuth } = useAuthStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -55,6 +63,25 @@ export default function App() {
     mediaQuery.addEventListener("change", applyTheme);
     return () => mediaQuery.removeEventListener("change", applyTheme);
   }, [theme]);
+
+  // Auth checking
+  if (authenticated === null) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <Loading />
+      </div>
+    );
+  }
+
+  // First-time setup
+  if (setup && !required) {
+    return <SetupPage />;
+  }
+
+  // Need login
+  if (required && !authenticated) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex text-gray-900 dark:text-gray-100 transition-colors duration-200">

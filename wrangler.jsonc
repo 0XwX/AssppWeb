@@ -1,33 +1,32 @@
 {
   "name": "assppweb",
-  "main": "cloudflare/src/index.ts",
+  "main": "src/index.ts",
   "compatibility_date": "2026-02-23",
-  "build": {
-    "command": "npm install --no-save --no-package-lock @cloudflare/containers@0.1.0",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "./frontend/dist",
+    "binding": "ASSETS"
   },
-  "containers": [
-    {
-      "class_name": "AssppContainer",
-      "image": "./Dockerfile",
-      "instance_type": "standard-1",
-      "max_instances": 1,
-    },
-  ],
   "durable_objects": {
     "bindings": [
-      {
-        "name": "ASPP_CONTAINER",
-        "class_name": "AssppContainer",
-      },
-    ],
+      { "name": "WISP_PROXY", "class_name": "WispProxy" },
+      { "name": "DOWNLOAD_MANAGER", "class_name": "DownloadManager" }
+    ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["AssppContainer"],
-    },
+      "new_sqlite_classes": ["WispProxy", "DownloadManager"]
+    }
   ],
-  "vars": {
-    "CONTAINER_INSTANCE_NAME": "main",
+  "r2_buckets": [
+    { "binding": "IPA_BUCKET", "bucket_name": "assppweb-ipa" }
+  ],
+  "triggers": {
+    "crons": ["0 2 * * *"]
   },
+  "vars": {
+    "AUTO_CLEANUP_DAYS": "7",
+    "AUTO_CLEANUP_MAX_MB": "5120"
+  }
 }

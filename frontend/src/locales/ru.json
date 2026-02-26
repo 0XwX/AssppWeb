@@ -1,5 +1,23 @@
 {
   "loading": "Загрузка...",
+  "auth": {
+    "loginPrompt": "Введите пароль доступа для продолжения.",
+    "passwordPlaceholder": "Пароль доступа",
+    "loginButton": "Войти",
+    "invalidPassword": "Неверный пароль. Попробуйте снова.",
+    "setupPrompt": "Установите пароль доступа для защиты этого экземпляра.",
+    "confirmPassword": "Подтвердите пароль",
+    "setupButton": "Установить пароль",
+    "passwordMismatch": "Пароли не совпадают.",
+    "setupFailed": "Не удалось установить пароль.",
+    "logout": "Выйти",
+    "changePasswordBtn": "Изменить пароль",
+    "changePasswordTitle": "Изменить пароль",
+    "currentPassword": "Текущий пароль",
+    "newPassword": "Новый пароль",
+    "passwordChanged": "Пароль успешно изменён.",
+    "changeFailed": "Не удалось изменить пароль."
+  },
   "theme": {
     "light": "Светлая тема",
     "dark": "Темная тема",
@@ -206,12 +224,17 @@
     },
     "server": {
       "title": "Сервер",
-      "uptime": "Время работы",
       "offline": "Не удалось подключиться к серверу.",
-      "configuration": "Конфигурация сервера",
       "enabled": "Включено",
       "disabled": "Отключено",
-      "notSet": "Не задано (автоопределение)"
+      "accessPassword": "Пароль доступа",
+      "cleanupDays": "Автоочистка (дни)",
+      "cleanupDaysHint": "Удалять пакеты старше N дней. 0 = отключено.",
+      "cleanupMaxMB": "Макс. хранилище (МБ)",
+      "cleanupMaxMBHint": "Удалять старые пакеты при превышении N МБ. 0 = отключено.",
+      "saveCleanup": "Сохранить",
+      "saved": "Настройки сохранены.",
+      "saveFailed": "Не удалось сохранить настройки."
     },
     "data": {
       "title": "Данные",
