@@ -489,18 +489,26 @@ export async function appendToZipTail(
   archiveSize: number,
   readRange: ZipReadRange,
   files: AppendFile[],
+  precomputed?: { eocd: Eocd; entries: CdEntry[] },
 ): Promise<{ cdOffset: number; tail: Uint8Array }> {
   if (files.length === 0) {
     return { cdOffset: archiveSize, tail: new Uint8Array(0) };
   }
 
-  // 1. Locate EOCD and parse Central Directory
-  const tailSize = Math.min(65536 + 22, archiveSize);
-  const tailBuf = await readRange(archiveSize - tailSize, archiveSize);
-  const eocd = findEocd(tailBuf, archiveSize);
+  // 1. Locate EOCD and parse Central Directory (reuse if precomputed)
+  let eocd: Eocd;
+  let existingEntries: CdEntry[];
+  if (precomputed) {
+    eocd = precomputed.eocd;
+    existingEntries = precomputed.entries;
+  } else {
+    const tailSize = Math.min(65536 + 22, archiveSize);
+    const tailBuf = await readRange(archiveSize - tailSize, archiveSize);
+    eocd = findEocd(tailBuf, archiveSize);
 
-  const cd = await readRange(eocd.cdOffset, eocd.cdOffset + eocd.cdSize);
-  const existingEntries = parseCentralDirectory(cd);
+    const cd = await readRange(eocd.cdOffset, eocd.cdOffset + eocd.cdSize);
+    existingEntries = parseCentralDirectory(cd);
+  }
 
   // 2. Build new local entries and CD entries
   let appendOffset = eocd.cdOffset;

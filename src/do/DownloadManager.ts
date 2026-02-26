@@ -14,6 +14,7 @@ import {
   findEocd,
   parseCentralDirectory,
   readEntryData,
+  type CdEntry,
 } from '../services/zipAppend.js';
 import type { DownloadTask, Software, Sinf } from '../types.js';
 
@@ -705,16 +706,26 @@ export class DownloadManager extends DurableObject<Env> {
       return new Uint8Array(await obj.arrayBuffer());
     };
 
-    // Parse ZIP metadata to determine sinfPaths
-    const filesToAppend = await this.buildFilesToAppend(task, archiveSize, readRange);
+    // Read EOCD + Central Directory once, reuse for both buildFilesToAppend and appendToZipTail
+    const tailSize = Math.min(65536 + 22, archiveSize);
+    const tailBuf = await readRange(archiveSize - tailSize, archiveSize);
+    const eocd = findEocd(tailBuf, archiveSize);
+    const cd = await readRange(eocd.cdOffset, eocd.cdOffset + eocd.cdSize);
+    const entries = parseCentralDirectory(cd);
+
+    const filesToAppend = await this.buildFilesToAppend(task, entries, readRange);
     if (filesToAppend.length === 0) return;
 
-    // Compute only the tail (no full-archive read)
-    const { cdOffset, tail } = await appendToZipTail(archiveSize, readRange, filesToAppend);
+    // Compute only the tail (no full-archive read), reusing precomputed CD
+    const { cdOffset, tail } = await appendToZipTail(archiveSize, readRange, filesToAppend, {
+      eocd,
+      entries,
+    });
 
-    // Compose new IPA via R2 multipart upload:
-    //   Parts 1..N: chunks of original IPA [0, cdOffset) in 500MB slices
-    //   Last part:  tail (new local entries + new CD + new EOCD, few KB)
+    // Compose new IPA via R2 multipart upload to a temp key, then swap.
+    // We must use a separate key because R2 throttles concurrent reads on
+    // the same object (error 10058), and readRange() needs to GET the
+    // original key while we uploadPart() to the new one.
     const COPY_CHUNK = 50 * 1024 * 1024; // 50 MB per part (DO usable memory ~70-90 MB)
     const newKey = r2key + '.new';
     const upload = await this.env.IPA_BUCKET.createMultipartUpload(newKey);
@@ -755,8 +766,7 @@ export class DownloadManager extends DurableObject<Env> {
       throw err;
     }
 
-    // Swap: overwrite original with new, then delete temp key
-    // (put before delete ensures original is preserved if put fails)
+    // Atomic swap: overwrite original with new, then delete temp key
     const newObj = await this.env.IPA_BUCKET.get(newKey);
     if (!newObj) throw new Error('R2 rename step failed: new object missing');
     await this.env.IPA_BUCKET.put(r2key, newObj.body);
@@ -767,17 +777,10 @@ export class DownloadManager extends DurableObject<Env> {
 
   private async buildFilesToAppend(
     task: DownloadTask,
-    archiveSize: number,
+    entries: CdEntry[],
     readRange: (start: number, end: number) => Promise<Uint8Array>,
   ): Promise<Array<{ name: string; data: Uint8Array }>> {
     const files: Array<{ name: string; data: Uint8Array }> = [];
-
-    // Parse Central Directory to find Manifest.plist and Info.plist
-    const tailSize = Math.min(65536 + 22, archiveSize);
-    const tail = await readRange(archiveSize - tailSize, archiveSize);
-    const eocd = findEocd(tail, archiveSize);
-    const cd = await readRange(eocd.cdOffset, eocd.cdOffset + eocd.cdSize);
-    const entries = parseCentralDirectory(cd);
 
     // Find bundle name
     let bundleName: string | null = null;
