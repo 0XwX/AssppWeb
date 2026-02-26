@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import PageContainer from '../Layout/PageContainer';
 import Modal from '../common/Modal';
@@ -42,7 +42,6 @@ export default function SettingsPage() {
   const [exportPassword, setExportPassword] = useState('');
   const [exportConfirmPassword, setExportConfirmPassword] = useState('');
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importPassword, setImportPassword] = useState('');
   const [importFileData, setImportFileData] = useState('');
@@ -460,19 +459,10 @@ export default function SettingsPage() {
             >
               {t('settings.data.exportBtn')}
             </button>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
-            >
+            <label className="px-4 py-2 text-sm font-medium text-green-600 dark:text-green-400 border border-green-300 dark:border-green-800 rounded-lg hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors cursor-pointer">
               {t('settings.data.importBtn')}
-            </button>
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept=".enc"
-              onChange={handleFileSelect}
-            />
+              <input type="file" className="hidden" accept=".enc" onChange={handleFileSelect} />
+            </label>
           </div>
 
           <button
