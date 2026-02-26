@@ -238,7 +238,9 @@
       "saveFailed": "儲存設定失敗。",
       "storage": "儲存空間",
       "storageFiles": "{{count}} 個檔案",
-      "storageEmpty": "無檔案"
+      "storageEmpty": "無檔案",
+      "cdnDomain": "CDN 網域",
+      "cdnDomainHint": "設定 R2_CDN_DOMAIN 環境變數以啟用 CDN 加速。"
     },
     "data": {
       "title": "資料",

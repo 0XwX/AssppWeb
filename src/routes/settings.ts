@@ -28,6 +28,7 @@ settings.get('/settings', async (c) => {
     autoCleanupMaxMB: config.autoCleanupMaxMB ?? envMaxMB,
     storageSizeMB: Math.round((storageSizeBytes / (1024 * 1024)) * 100) / 100,
     storageFileCount,
+    r2CdnDomain: c.env.R2_CDN_DOMAIN || undefined,
   });
 });
 

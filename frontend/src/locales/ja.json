@@ -238,7 +238,9 @@
       "saveFailed": "設定の保存に失敗しました。",
       "storage": "ストレージ",
       "storageFiles": "{{count}} ファイル",
-      "storageEmpty": "ファイルなし"
+      "storageEmpty": "ファイルなし",
+      "cdnDomain": "CDN ドメイン",
+      "cdnDomainHint": "R2_CDN_DOMAIN 環境変数を設定して CDN アクセラレーションを有効にします。"
     },
     "data": {
       "title": "データ",

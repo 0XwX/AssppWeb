@@ -13,5 +13,6 @@ declare global {
     POW_DIFFICULTY?: string;
     BUILD_COMMIT?: string;
     BUILD_DATE?: string;
+    R2_CDN_DOMAIN?: string;
   }
 }

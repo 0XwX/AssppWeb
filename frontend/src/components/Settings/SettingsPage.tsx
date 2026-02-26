@@ -17,6 +17,7 @@ interface ServerInfo {
   autoCleanupMaxMB?: number;
   storageSizeMB?: number;
   storageFileCount?: number;
+  r2CdnDomain?: string;
 }
 
 const entityTypes = [
@@ -388,6 +389,32 @@ export default function SettingsPage() {
                     </>
                   ) : (
                     <span className="text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t('settings.server.cdnDomain')}
+                </dt>
+                <dd className="text-sm mt-1">
+                  {serverInfo.r2CdnDomain ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                        {t('settings.server.enabled')}
+                      </span>
+                      <span className="font-mono text-gray-900 dark:text-white">
+                        {serverInfo.r2CdnDomain}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                        {t('settings.server.disabled')}
+                      </span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {t('settings.server.cdnDomainHint')}
+                      </span>
+                    </span>
                   )}
                 </dd>
               </div>

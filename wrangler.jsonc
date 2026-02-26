@@ -27,5 +27,8 @@
   "vars": {
     "AUTO_CLEANUP_DAYS": "2",
     "AUTO_CLEANUP_MAX_MB": "8192",
+    // R2_CDN_DOMAIN: R2 public bucket custom domain for CDN-accelerated IPA downloads.
+    // Set to your R2 custom domain (e.g. "cdn.example.com") after connecting it
+    // in Dashboard → R2 → bucket → Settings → Public access → Custom Domains.
   },
 }

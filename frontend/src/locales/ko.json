@@ -238,7 +238,9 @@
       "saveFailed": "설정 저장에 실패했습니다.",
       "storage": "저장 공간",
       "storageFiles": "{{count}}개 파일",
-      "storageEmpty": "파일 없음"
+      "storageEmpty": "파일 없음",
+      "cdnDomain": "CDN 도메인",
+      "cdnDomainHint": "R2_CDN_DOMAIN 환경 변수를 설정하여 CDN 가속을 활성화합니다."
     },
     "data": {
       "title": "데이터",

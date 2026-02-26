@@ -238,7 +238,9 @@
       "saveFailed": "Не удалось сохранить настройки.",
       "storage": "Хранилище",
       "storageFiles": "{{count}} файлов",
-      "storageEmpty": "Нет файлов"
+      "storageEmpty": "Нет файлов",
+      "cdnDomain": "CDN домен",
+      "cdnDomainHint": "Установите переменную R2_CDN_DOMAIN для включения CDN-ускорения."
     },
     "data": {
       "title": "Данные",

@@ -238,7 +238,9 @@
       "saveFailed": "Failed to save settings.",
       "storage": "Storage",
       "storageFiles": "{{count}} files",
-      "storageEmpty": "No files"
+      "storageEmpty": "No files",
+      "cdnDomain": "CDN Domain",
+      "cdnDomainHint": "Set R2_CDN_DOMAIN env var to enable CDN acceleration."
     },
     "data": {
       "title": "Data",

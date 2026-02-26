@@ -69,6 +69,14 @@ install.get('/install/:id/payload.ipa', async (c) => {
   const r2key = await dm(c.env).getR2KeyPublic(id);
   if (!r2key) return c.json({ error: 'Package not found' }, 404);
 
+  // CDN direct link: 302 redirect to R2 public bucket custom domain
+  const cdnDomain = c.env.R2_CDN_DOMAIN;
+  if (cdnDomain && /^[\w.-]+$/.test(cdnDomain)) {
+    const encodedKey = r2key.split('/').map(encodeURIComponent).join('/');
+    return c.redirect(`https://${cdnDomain}/${encodedKey}`, 302);
+  }
+
+  // Fallback: stream from R2 through Worker
   const obj = await c.env.IPA_BUCKET.get(r2key);
   if (!obj) return c.json({ error: 'Package not found' }, 404);
 
