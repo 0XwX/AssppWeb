@@ -221,7 +221,7 @@ function powHmacKey(): Promise<CryptoKey> {
 export async function generateChallenge(
   env: Env,
 ): Promise<{ challenge: string; difficulty: number }> {
-  const difficulty = Math.min(24, Math.max(16, parseInt(env.POW_DIFFICULTY ?? '20', 10) || 20));
+  const difficulty = Math.min(24, Math.max(16, parseInt(env.POW_DIFFICULTY ?? '18', 10) || 18));
   const timestamp = Math.floor(Date.now() / 1000);
   const random = crypto.randomUUID();
   const payload = `${timestamp}:${random}`;
@@ -263,7 +263,7 @@ export async function verifyPow(challenge: string, nonce: string, env: Env): Pro
   if (now - timestamp > POW_CHALLENGE_TTL) return false;
 
   // Verify hash difficulty
-  const difficulty = Math.min(24, Math.max(16, parseInt(env.POW_DIFFICULTY ?? '20', 10) || 20));
+  const difficulty = Math.min(24, Math.max(16, parseInt(env.POW_DIFFICULTY ?? '18', 10) || 18));
   const data = new TextEncoder().encode(challenge + nonce);
   const hash = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
   if (!hasLeadingZeroBits(hash, difficulty)) return false;

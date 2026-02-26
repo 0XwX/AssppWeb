@@ -14,7 +14,13 @@ AssppWeb uses a zero-trust design where the server **never sees your Apple crede
 
 ## Quick Start
 
-### Deploy to Cloudflare Workers
+### One-Click Deploy
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/0XwX/AssppWeb)
+
+Click the button above to automatically fork, provision KV/R2/Durable Objects, and deploy to your Cloudflare account.
+
+### Manual Deploy
 
 1. Fork this repository
 2. Install dependencies and deploy:
